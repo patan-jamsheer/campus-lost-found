@@ -299,7 +299,7 @@ def submit_report_lost():
                 f"📝 Details  : {description}\n"
                 f"📅 Lost On  : {date_lost}\n\n"
                 f"Have you seen it? Log in and help them out!\n"
-                f"👉 http://localhost:5000/lost_items/{user_id}\n\n"
+                f"👉 https://campus-lost-found-app.onrender.com/lost_items/{user_id}\n\n"
                 f"— Campus Lost & Found Team"
             ),
             recipient_list=all_emails
@@ -415,7 +415,7 @@ def submit_report_found():
                 f"📍 Found At      : {location_found}\n"
                 f"📅 Date Found    : {date_found}\n\n"
                 f"Think it's yours? Log in and submit a claim!\n"
-                f"👉 http://localhost:5000/found_items/{user_id}\n\n"
+                f"👉 https://campus-lost-found-app.onrender.com/found_items/{user_id}\n\n"
                 f"— Campus Lost & Found Team"
             ),
             recipient_list=all_emails
