@@ -76,7 +76,7 @@ def send_notification_email(subject, body, recipient_list):
                 "https://api.brevo.com/v3/smtp/email",
                 headers={"api-key": api_key, "Content-Type": "application/json"},
                 json={
-                    "sender": {"email": os.environ.get('MAIL_USERNAME'), "name": "Campus Lost & Found"},
+                    "sender": {"email": "jamsheerkhan118@gmail.com", "name": "Campus Lost & Found"},
                     "to": to,
                     "subject": subject,
                     "textContent": body
