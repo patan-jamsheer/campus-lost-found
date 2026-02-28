@@ -71,9 +71,11 @@ def send_notification_email(subject, body, recipient_list):
             try:
                 msg = Message(subject=subject, recipients=recipient_list, body=body)
                 mail.send(msg)
-                print(f"✅ Notification sent to {len(recipient_list)} users.")
+                print(f"✅ Notification sent to {len(recipient_list)} users.", flush=True)
             except Exception as e:
-                print(f"❌ Email error: {e}")
+                import traceback
+                print(f"❌ Email error: {e}", flush=True)
+                print(traceback.format_exc(), flush=True)
     threading.Thread(target=send).start()
 
 # ── Admin guard ─────────────────────────────────────────────
