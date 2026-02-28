@@ -12,9 +12,9 @@ app.secret_key = "campus_secret_key_2024"
 # ── Email Config ─────────────────────────────────────────────
 # ⚠️  CHANGE THESE 2 LINES with your Gmail and App Password
 app.config['MAIL_SERVER']         = os.environ.get('MAIL_SERVER', 'smtp-relay.brevo.com')
-app.config['MAIL_PORT']           = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS']        = True
-app.config['MAIL_USE_SSL']         = False
+app.config['MAIL_PORT']           = int(os.environ.get('MAIL_PORT', 465))
+app.config['MAIL_USE_TLS']        = False
+app.config['MAIL_USE_SSL']         = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')  # ← PUT YOUR APP PASSWORD HERE
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
