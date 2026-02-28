@@ -66,17 +66,28 @@ def get_all_user_emails():
     return emails
 
 def send_notification_email(subject, body, recipient_list):
-    """Send email to all users in a background thread (so page doesn't slow down)."""
+    """Send email to all users via Brevo HTTP API in a background thread."""
     def send():
-        with app.app_context():
-            try:
-                msg = Message(subject=subject, recipients=recipient_list, body=body)
-                mail.send(msg)
+        try:
+            import requests
+            api_key = os.environ.get('BREVO_API_KEY')
+            to = [{"email": email} for email in recipient_list]
+            response = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={"api-key": api_key, "Content-Type": "application/json"},
+                json={
+                    "sender": {"email": os.environ.get('MAIL_USERNAME'), "name": "Campus Lost & Found"},
+                    "to": to,
+                    "subject": subject,
+                    "textContent": body
+                }
+            )
+            if response.status_code == 201:
                 print(f"✅ Notification sent to {len(recipient_list)} users.", flush=True)
-            except Exception as e:
-                import traceback
-                print(f"❌ Email error: {e}", flush=True)
-                print(traceback.format_exc(), flush=True)
+            else:
+                print(f"❌ Email error: {response.text}", flush=True)
+        except Exception as e:
+            print(f"❌ Email error: {e}", flush=True)
     threading.Thread(target=send).start()
 
 # ── Admin guard ─────────────────────────────────────────────
