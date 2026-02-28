@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ item.item_name }} — Lost Item</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #080c14; --surface: #0f1623;
+            --border: rgba(255,255,255,0.06);
+            --accent: #38bdf8; --accent2: #818cf8;
+            --text: #e2e8f0; --muted: #64748b; --sidebar-w: 270px;
+            --orange: #f97316; --amber: #fbbf24;
+        }
+
+        body { font-family: 'DM Sans', sans-serif; background: #f1f5f9; min-height: 100vh; }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position: fixed; left: 0; top: 0;
+            width: var(--sidebar-w); height: 100vh;
+            background: var(--bg); display: flex; flex-direction: column;
+            overflow: hidden; z-index: 10;
+        }
+        .sidebar::before {
+            content: ''; position: absolute; top: -80px; left: -60px;
+            width: 320px; height: 320px;
+            background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; padding: 22px 24px 18px; border-bottom: 1px solid var(--border); }
+        .brand-icon { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: grid; place-items: center; font-size: 16px; flex-shrink: 0; }
+        .brand-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: var(--text); letter-spacing: 0.02em; }
+        .brand-name span { color: var(--accent); }
+        .profile-card { margin: 18px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .avatar-wrap { position: relative; width: 70px; height: 70px; }
+        .avatar-wrap img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); transition: border-color 0.3s; }
+        .avatar-wrap:hover img { border-color: var(--accent2); }
+        .avatar-badge { position: absolute; bottom: 2px; right: 2px; width: 13px; height: 13px; border-radius: 50%; background: #22c55e; border: 2px solid var(--bg); }
+        .profile-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+        .profile-dept { font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.05); padding: 3px 10px; border-radius: 20px; }
+        nav { flex: 1; padding: 6px 12px; overflow-y: auto; }
+        nav::-webkit-scrollbar { width: 0; }
+        .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--muted); padding: 14px 10px 6px; text-transform: uppercase; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s, color 0.2s; position: relative; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+        .nav-item.active { background: rgba(56,189,248,0.1); color: var(--accent); }
+        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 20%; height: 60%; width: 3px; border-radius: 2px; background: var(--accent); }
+        .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+        .edit-cta { margin: 14px 16px 20px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: linear-gradient(135deg, #5c6ef8, #a78bfa); border-radius: 12px; color: white; font-weight: 600; font-size: 13px; text-decoration: none; box-shadow: 0 4px 20px rgba(92,110,248,0.35); transition: transform 0.2s, box-shadow 0.2s; }
+        .edit-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(92,110,248,0.5); color: white; }
+        .logout { margin: 0 12px 16px; display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: #f87171; font-size: 14px; font-weight: 500; text-decoration: none; transition: background 0.2s; }
+        .logout:hover { background: rgba(248,113,113,0.1); }
+
+        /* ── MAIN ── */
+        .main { margin-left: var(--sidebar-w); min-height: 100vh; background: #f1f5f9; }
+
+        /* Hero banner */
+        .hero-banner {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 40px 48px 120px;
+            position: relative; overflow: hidden;
+        }
+        .hero-banner::before {
+            content: ''; position: absolute; inset: 0;
+            background-image: radial-gradient(rgba(249,115,22,0.08) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+        .hero-orb { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; }
+        .hero-orb-1 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(249,115,22,0.25), transparent 70%); top: -100px; right: -80px; }
+        .hero-orb-2 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(251,191,36,0.15), transparent 70%); bottom: -60px; left: 100px; }
+
+        .back-link {
+            position: relative; z-index: 2;
+            display: inline-flex; align-items: center; gap: 7px;
+            color: rgba(255,255,255,0.55); text-decoration: none;
+            font-size: 0.82rem; font-weight: 500; margin-bottom: 28px; transition: color 0.2s;
+        }
+        .back-link:hover { color: white; }
+        .back-link svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        .hero-content { position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 28px; }
+        .hero-category-icon {
+            width: 70px; height: 70px; border-radius: 20px;
+            background: linear-gradient(135deg, var(--orange), var(--amber));
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            box-shadow: 0 12px 36px rgba(249,115,22,0.4);
+        }
+        .hero-category-icon svg { width: 32px; height: 32px; stroke: white; fill: none; stroke-width: 2; }
+        .hero-text { flex: 1; }
+        .hero-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .hero-cat-tag { background: rgba(249,115,22,0.2); border: 1px solid rgba(249,115,22,0.4); color: #fbbf24; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 12px; border-radius: 100px; }
+        .hero-status { font-size: 0.68rem; font-weight: 700; padding: 4px 12px; border-radius: 100px; letter-spacing: 0.08em; }
+        .s-searching { background: rgba(249,115,22,0.2); color: #f97316; border: 1px solid rgba(249,115,22,0.4); }
+        .s-found     { background: rgba(34,197,94,0.2);  color: #22c55e; border: 1px solid rgba(34,197,94,0.4); }
+        .s-closed    { background: rgba(148,163,184,0.2); color: #94a3b8; border: 1px solid rgba(148,163,184,0.4); }
+        .hero-title { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 700; color: white; line-height: 1.2; margin-bottom: 10px; }
+        .hero-date { font-size: 0.82rem; color: rgba(255,255,255,0.45); display: flex; align-items: center; gap: 6px; }
+        .hero-date svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        /* Content */
+        .content-area { padding: 0 48px 48px; margin-top: -80px; position: relative; z-index: 10; }
+        .content-grid { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
+
+        .detail-card { background: white; border-radius: 20px; box-shadow: 0 4px 24px rgba(0,0,0,0.07); overflow: hidden; border: 1px solid #f1f5f9; }
+        .card-section-head { padding: 20px 24px 0; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #94a3b8; display: flex; align-items: center; gap: 8px; }
+        .card-section-head::after { content: ''; flex: 1; height: 1px; background: #f1f5f9; }
+
+        .item-main-img { width: 100%; max-height: 380px; object-fit: cover; display: block; }
+        .no-img-block { width: 100%; height: 260px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+        .no-img-block svg { width: 52px; height: 52px; stroke: #cbd5e1; fill: none; stroke-width: 1.5; }
+        .no-img-block span { font-size: 0.8rem; color: #94a3b8; }
+
+        .desc-block { padding: 20px 24px 24px; }
+        .desc-text { font-size: 0.92rem; color: #475569; line-height: 1.75; white-space: pre-line; }
+
+        .info-list { padding: 12px 24px 20px; }
+        .info-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f8fafc; }
+        .info-item:last-child { border-bottom: none; }
+        .info-ico { width: 36px; height: 36px; border-radius: 10px; background: #fff8f0; border: 1px solid #fde8c8; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .info-ico svg { width: 16px; height: 16px; stroke: var(--orange); fill: none; stroke-width: 2; }
+        .info-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #94a3b8; margin-bottom: 2px; }
+        .info-val   { font-size: 0.9rem; font-weight: 500; color: #1e293b; }
+
+        /* Reporter card */
+        .reporter-card { background: white; border-radius: 20px; box-shadow: 0 4px 24px rgba(0,0,0,0.07); border: 1px solid #f1f5f9; overflow: hidden; }
+        .reporter-hero { background: linear-gradient(135deg, #f97316, #fbbf24); padding: 28px 24px 52px; text-align: center; position: relative; }
+        .reporter-hero::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 40px; background: white; border-radius: 50% 50% 0 0 / 40px 40px 0 0; }
+        .reporter-avatar-wrap { position: relative; display: inline-block; }
+        .reporter-avatar-big { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 8px 24px rgba(0,0,0,0.18); display: block; }
+        .online-ring { position: absolute; inset: -4px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.6); animation: spin 14s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .reporter-body { padding: 4px 24px 24px; text-align: center; }
+        .reporter-name-big { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
+        .reporter-dept { font-size: 0.78rem; color: #64748b; margin-bottom: 4px; }
+        .reporter-section { font-size: 0.72rem; color: #94a3b8; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 20px; }
+        .reporter-section span { background: #f1f5f9; border-radius: 100px; padding: 3px 10px; font-weight: 600; color: #475569; }
+
+        .contact-details { margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .contact-row { display: flex; align-items: center; gap: 12px; background: #f8fafc; border-radius: 12px; padding: 12px 16px; }
+        .contact-row-ico { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .contact-row-ico svg { width: 15px; height: 15px; fill: none; stroke-width: 2; }
+        .contact-row-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #94a3b8; margin-bottom: 2px; }
+        .contact-row-val   { font-size: 0.85rem; font-weight: 500; color: #1e293b; word-break: break-all; }
+
+        .cta-stack { display: flex; flex-direction: column; gap: 10px; }
+        .btn-wa { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 15px; border-radius: 14px; text-decoration: none; background: linear-gradient(135deg, #25D366, #128C7E); color: white; font-weight: 700; font-size: 0.95rem; box-shadow: 0 6px 24px rgba(37,211,102,0.4); transition: transform 0.18s, box-shadow 0.18s; position: relative; overflow: hidden; }
+        .btn-wa:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(37,211,102,0.55); }
+        .btn-wa svg { width: 22px; height: 22px; fill: white; }
+        .btn-email { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border-radius: 14px; text-decoration: none; background: #f8fafc; border: 1.5px solid #e2e8f0; color: #475569; font-weight: 600; font-size: 0.88rem; transition: 0.18s; }
+        .btn-email:hover { background: #fff8f0; border-color: var(--orange); color: var(--orange); }
+        .btn-email svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .btn-note { text-align: center; font-size: 0.7rem; color: #94a3b8; margin-top: 4px; }
+        .btn-delete { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #fecaca; background: #fff1f2; color: #dc2626; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 700; cursor: pointer; margin-top: 6px; transition: background 0.18s, border-color 0.18s; }
+        .btn-delete:hover { background: #fee2e2; border-color: #f87171; }
+
+        @media (max-width: 900px) {
+            .main { margin-left: 0; }
+            .sidebar { display: none; }
+            .hero-banner { padding: 28px 20px 100px; }
+            .content-area { padding: 0 16px 40px; }
+            .content-grid { grid-template-columns: 1fr; }
+            .hero-title { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+    <div class="brand">
+        <div class="brand-icon">🔍</div>
+        <div class="brand-name">Lost<span>&</span>Found</div>
+    </div>
+    <div class="profile-card">
+        <a href="{{ url_for('profile', user_id=user.id) }}" class="avatar-wrap">
+            <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" alt="Profile">
+            <span class="avatar-badge"></span>
+        </a>
+        <div class="profile-name">{{ user.name }}</div>
+        <div class="profile-dept">{{ user.department }}</div>
+    </div>
+    <nav>
+        <div class="nav-label">Menu</div>
+        <a href="{{ url_for('profile', user_id=user.id) }}"          class="nav-item"><span class="nav-icon">👤</span> My Profile</a>
+        <a href="{{ url_for('report_lost', user_id=user.id) }}"      class="nav-item"><span class="nav-icon">📦</span> Report Lost Item</a>
+        <a href="{{ url_for('report_found', user_id=user.id) }}"     class="nav-item"><span class="nav-icon">✅</span> Report Found Item</a>
+        <a href="{{ url_for('lost_items_list', user_id=user.id) }}"  class="nav-item active"><span class="nav-icon">🔎</span> Browse Lost Items</a>
+        <a href="{{ url_for('found_items_list', user_id=user.id) }}" class="nav-item"><span class="nav-icon">📋</span> Browse Found Items</a>
+        <a href="{{ url_for('my_claims', user_id=user.id) }}" class="nav-item"><span class="nav-icon">🤝</span> My Claims</a>
+        <div class="nav-label">Account</div>
+        <a href="#" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <a href="{{ url_for('edit_profile', user_id=user.id) }}" class="edit-cta">✏️ Edit Profile</a>
+    <a href="/logout" class="logout"><span class="nav-icon">🚪</span> Logout</a>
+</div>
+
+<div class="main">
+    <div class="hero-banner">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <a href="{{ url_for('lost_items_list', user_id=user.id) }}" class="back-link">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to Lost Items
+        </a>
+        <div class="hero-content">
+            <div class="hero-category-icon">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <div class="hero-text">
+                <div class="hero-meta">
+                    <span class="hero-cat-tag">{{ item.category }}</span>
+                    <span class="hero-status {% if item.status == 'Searching' %}s-searching{% elif item.status == 'Found' %}s-found{% else %}s-closed{% endif %}">
+                        {% if item.status == 'Searching' %}🔴{% elif item.status == 'Found' %}🟢{% else %}⚫{% endif %}
+                        {{ item.status }}
+                    </span>
+                </div>
+                <h1 class="hero-title">{{ item.item_name }}</h1>
+                <div class="hero-date">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Lost on {{ item.date_lost.strftime('%d %B %Y') }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="content-grid">
+            <div style="display:flex; flex-direction:column; gap:20px;">
+                <div class="detail-card">
+                    <div class="card-section-head">Photo</div>
+                    <div>
+                        {% if item.image %}
+                            <img class="item-main-img" src="{{ url_for('static', filename='uploads/lost_items/' + item.image) }}" alt="{{ item.item_name }}">
+                        {% else %}
+                            <div class="no-img-block">
+                                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                <span>No photo uploaded</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="detail-card">
+                    <div class="card-section-head">Description</div>
+                    <div class="desc-block"><p class="desc-text">{{ item.description }}</p></div>
+                </div>
+                <div class="detail-card">
+                    <div class="card-section-head">Item Details</div>
+                    <div class="info-list">
+                        <div class="info-item">
+                            <div class="info-ico"><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>
+                            <div><div class="info-label">Item Name</div><div class="info-val">{{ item.item_name }}</div></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+                            <div><div class="info-label">Category</div><div class="info-val">{{ item.category }}</div></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                            <div><div class="info-label">Date Lost</div><div class="info-val">{{ item.date_lost.strftime('%d %B %Y') }}</div></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                            <div><div class="info-label">Reported On</div><div class="info-val">{{ item.created_at.strftime('%d %B %Y, %I:%M %p') }}</div></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-ico"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                            <div><div class="info-label">Status</div><div class="info-val">{{ item.status }}</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="reporter-card">
+                    <div class="reporter-hero">
+                        <div class="reporter-avatar-wrap">
+                            <div class="online-ring"></div>
+                            <img class="reporter-avatar-big" src="{{ url_for('static', filename='uploads/' + (reporter.profile_pic or 'default.jpeg')) }}" alt="{{ reporter.name }}">
+                        </div>
+                    </div>
+                    <div class="reporter-body">
+                        <div class="reporter-name-big">{{ reporter.name }}</div>
+                        <div class="reporter-dept">{{ reporter.department }}</div>
+                        <div class="reporter-section">
+                            <span>{{ reporter.year }}</span>
+                            <span>Section {{ reporter.section }}</span>
+                        </div>
+                        <div class="contact-details">
+                            <div class="contact-row">
+                                <div class="contact-row-ico" style="background:#fff0f5;">
+                                    <svg viewBox="0 0 24 24" style="stroke:#e91e8c;"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                                </div>
+                                <div><div class="contact-row-label">Mobile</div><div class="contact-row-val">{{ reporter.mobile }}</div></div>
+                            </div>
+                            <div class="contact-row">
+                                <div class="contact-row-ico" style="background:#f0f4ff;">
+                                    <svg viewBox="0 0 24 24" style="stroke:#5c6ef8;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+                                </div>
+                                <div><div class="contact-row-label">Email</div><div class="contact-row-val" style="font-size:0.78rem;">{{ reporter.email }}</div></div>
+                            </div>
+                        </div>
+                        <div class="cta-stack">
+                            <a href="https://wa.me/91{{ reporter.mobile }}?text=Hi%20{{ reporter.name | urlencode }}%2C%20I%20saw%20your%20lost%20item%20report%20for%20%22{{ item.item_name | urlencode }}%22%20on%20the%20Campus%20Lost%20%26%20Found%20portal.%20I%20think%20I%20may%20have%20found%20it!" target="_blank" class="btn-wa">
+                                <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                                Chat on WhatsApp
+                            </a>
+                            <a href="mailto:{{ reporter.email }}?subject=Found your lost item: {{ item.item_name }}&body=Hi {{ reporter.name }}, I think I may have found your item!" class="btn-email">
+                                <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+                                Send Email
+                            </a>
+                            <p class="btn-note">🔒 Contact info visible to campus members only</p>
+
+                            {% if user.id == item.user_id or user.role == 'Admin' %}
+                            <form action="{{ url_for('delete_lost_item', item_id=item.id, user_id=user.id) }}" method="POST"
+                                  onsubmit="return confirm('Are you sure you want to delete this item? This cannot be undone.')">
+                                <button type="submit" class="btn-delete">
+                                    🗑 {% if user.role == 'Admin' %}Admin Delete{% else %}Delete My Report{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

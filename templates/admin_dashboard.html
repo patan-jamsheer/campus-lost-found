@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --bg: #080c14; --surface: #0f1623; --border: rgba(255,255,255,0.06); --accent: #38bdf8; --accent2: #818cf8; --text: #e2e8f0; --muted: #64748b; --sidebar-w: 270px; }
+        body { font-family: 'DM Sans', sans-serif; background: #f1f5f9; min-height: 100vh; }
+
+        /* SIDEBAR */
+        .sidebar { position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh; background: var(--bg); display: flex; flex-direction: column; overflow: hidden; z-index: 10; }
+        .sidebar::before { content: ''; position: absolute; top: -80px; left: -60px; width: 320px; height: 320px; background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%); pointer-events: none; }
+        .brand { display: flex; align-items: center; gap: 10px; padding: 22px 24px 18px; border-bottom: 1px solid var(--border); }
+        .brand-icon { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, #ef4444, #f97316); display: grid; place-items: center; font-size: 16px; flex-shrink: 0; }
+        .brand-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: var(--text); }
+        .brand-name span { color: #ef4444; }
+        .admin-badge { margin: 12px 16px; background: linear-gradient(135deg, #ef4444, #f97316); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+        .admin-badge span { font-size: 12px; font-weight: 700; color: white; letter-spacing: 0.08em; text-transform: uppercase; }
+        nav { flex: 1; padding: 6px 12px; overflow-y: auto; }
+        nav::-webkit-scrollbar { width: 0; }
+        .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--muted); padding: 14px 10px 6px; text-transform: uppercase; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s, color 0.2s; position: relative; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+        .nav-item.active { background: rgba(239,68,68,0.12); color: #ef4444; }
+        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 20%; height: 60%; width: 3px; border-radius: 2px; background: #ef4444; }
+        .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+        .logout { margin: 0 12px 16px; display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: #f87171; font-size: 14px; font-weight: 500; text-decoration: none; transition: background 0.2s; }
+        .logout:hover { background: rgba(248,113,113,0.1); }
+
+        /* MAIN */
+        .main { margin-left: var(--sidebar-w); padding: 36px; }
+        .page-header { margin-bottom: 28px; }
+        .page-header h1 { font-family: 'Syne', sans-serif; font-size: 26px; color: #0f172a; }
+        .page-header p { color: #64748b; font-size: 13px; margin-top: 4px; }
+
+        .flash { padding: 14px 18px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 500; }
+        .flash.success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .flash.error   { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+
+        /* STAT CARDS */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .stat-card { background: white; border-radius: 16px; padding: 22px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #f1f5f9; display: flex; align-items: center; gap: 16px; }
+        .stat-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+        .stat-icon.red    { background: #fee2e2; }
+        .stat-icon.blue   { background: #e0f2fe; }
+        .stat-icon.green  { background: #dcfce7; }
+        .stat-icon.yellow { background: #fef9c3; }
+        .stat-num { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1; }
+        .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 500; }
+
+        /* SECTION */
+        .section { background: white; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 28px; }
+        .section-head { padding: 18px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
+        .section-head h2 { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: #0f172a; }
+        .section-head span { font-size: 12px; color: #94a3b8; }
+
+        /* CLAIMS TABLE */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; background: #f8fafc; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+        td { padding: 14px 16px; font-size: 13px; color: #374151; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafafa; }
+
+        .td-item { font-weight: 600; color: #0f172a; }
+        .td-user { display: flex; flex-direction: column; }
+        .td-user .name { font-weight: 600; color: #0f172a; }
+        .td-user .email { font-size: 11px; color: #94a3b8; }
+        .td-message { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; font-style: italic; }
+
+        /* Status badges */
+        .s-pill { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .s-pending  { background: #fef9c3; color: #a16207; }
+        .s-approved { background: #dcfce7; color: #15803d; }
+        .s-rejected { background: #fee2e2; color: #dc2626; }
+        .s-searching { background: #fff4e5; color: #f97316; }
+        .s-found     { background: #dcfce7; color: #15803d; }
+        .s-closed    { background: #f1f5f9; color: #94a3b8; }
+        .s-available { background: #dcfce7; color: #15803d; }
+        .s-claimed   { background: #fef9c3; color: #a16207; }
+
+        /* Action buttons */
+        .btn-approve { padding: 6px 14px; border-radius: 8px; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-size: 12px; font-weight: 700; text-decoration: none; transition: background 0.2s; cursor: pointer; }
+        .btn-approve:hover { background: #bbf7d0; }
+        .btn-reject  { padding: 6px 14px; border-radius: 8px; background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; font-size: 12px; font-weight: 700; text-decoration: none; transition: background 0.2s; cursor: pointer; }
+        .btn-reject:hover  { background: #fecaca; }
+        .btn-delete  { padding: 6px 12px; border-radius: 8px; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-size: 12px; font-weight: 700; text-decoration: none; transition: background 0.2s; }
+        .btn-delete:hover  { background: #fecdd3; }
+        .action-group { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        /* Status update form */
+        .status-form { display: flex; gap: 6px; align-items: center; }
+        .status-form select { padding: 5px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #1e293b; background: #f9fafb; outline: none; cursor: pointer; }
+        .status-form button { padding: 5px 12px; border-radius: 8px; background: #0ea5e9; color: white; border: none; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s; }
+        .status-form button:hover { background: #0284c7; }
+
+        /* Item row image */
+        .row-img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .row-img img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
+        .item-cell { display: flex; align-items: center; gap: 10px; }
+
+        .empty-row td { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+
+        /* Quick links */
+        .quick-links { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+        .quick-link { padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none; transition: transform 0.18s, box-shadow 0.18s; display: flex; align-items: center; gap: 7px; }
+        .quick-link:hover { transform: translateY(-2px); }
+        .ql-blue  { background: #e0f2fe; color: #0369a1; }
+        .ql-green { background: #dcfce7; color: #15803d; }
+        .ql-red   { background: #fee2e2; color: #dc2626; }
+        .ql-purple{ background: #ede9fe; color: #7c3aed; }
+
+        @media (max-width: 900px) { .sidebar { display: none; } .main { margin-left: 0; padding: 20px 16px; } }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="brand"><div class="brand-icon">🛡️</div><div class="brand-name">Admin<span> Panel</span></div></div>
+    <div class="admin-badge"><span>🔐</span><span>{{ admin.name }}</span></div>
+    <nav>
+        <div class="nav-label">Admin</div>
+        <a href="{{ url_for('admin_dashboard', admin_id=admin.id) }}" class="nav-item active"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="{{ url_for('admin_users', admin_id=admin.id) }}" class="nav-item"><span class="nav-icon">👥</span> All Users</a>
+        <div class="nav-label">Browse</div>
+        <a href="{{ url_for('lost_items_list', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">🔎</span> Lost Items</a>
+        <a href="{{ url_for('found_items_list', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">📋</span> Found Items</a>
+    </nav>
+    <a href="/logout" class="logout"><span class="nav-icon">🚪</span> Logout</a>
+</div>
+
+<div class="main">
+    <div class="page-header">
+        <h1>🛡️ Admin Dashboard</h1>
+        <p>Manage all items, claim requests, and users across the platform.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">👥</div>
+            <div><div class="stat-num">{{ stats.users }}</div><div class="stat-label">Total Users</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red">📦</div>
+            <div><div class="stat-num">{{ stats.lost }}</div><div class="stat-label">Lost Items</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">✅</div>
+            <div><div class="stat-num">{{ stats.found }}</div><div class="stat-label">Found Items</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow">⏳</div>
+            <div><div class="stat-num">{{ stats.pending_claims }}</div><div class="stat-label">Pending Claims</div></div>
+        </div>
+    </div>
+
+    <!-- QUICK LINKS -->
+    <div class="quick-links">
+        <a href="{{ url_for('admin_users', admin_id=admin.id) }}" class="quick-link ql-purple">👥 Manage Users</a>
+        <a href="{{ url_for('lost_items_list', user_id=admin.id) }}" class="quick-link ql-red">📦 View Lost Items</a>
+        <a href="{{ url_for('found_items_list', user_id=admin.id) }}" class="quick-link ql-green">📋 View Found Items</a>
+    </div>
+
+    <!-- CLAIM REQUESTS -->
+    <div class="section">
+        <div class="section-head">
+            <h2>🤝 Claim Requests</h2>
+            <span>{{ claims | length }} total</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Item</th>
+                        <th>Claimed By</th>
+                        <th>Message</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if claims %}
+                        {% for c in claims %}
+                        <tr>
+                            <td style="color:#94a3b8;">{{ c.id }}</td>
+                            <td class="td-item">{{ c.item_name }}</td>
+                            <td>
+                                <div class="td-user">
+                                    <span class="name">{{ c.claimant_name }}</span>
+                                    <span class="email">{{ c.claimant_email }}</span>
+                                </div>
+                            </td>
+                            <td><div class="td-message" title="{{ c.message }}">{{ c.message or '—' }}</div></td>
+                            <td style="white-space:nowrap;">{{ c.created_at.strftime('%d %b %Y') }}</td>
+                            <td>
+                                <span class="s-pill {% if c.status == 'Pending' %}s-pending{% elif c.status == 'Approved' %}s-approved{% else %}s-rejected{% endif %}">
+                                    {% if c.status == 'Pending' %}⏳{% elif c.status == 'Approved' %}✅{% else %}❌{% endif %}
+                                    {{ c.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-group">
+                                    {% if c.status == 'Pending' %}
+                                    <a href="{{ url_for('admin_update_claim', claim_id=c.id, action='approve', admin_id=admin.id) }}" class="btn-approve">✅ Approve</a>
+                                    <a href="{{ url_for('admin_update_claim', claim_id=c.id, action='reject', admin_id=admin.id) }}" class="btn-reject">❌ Reject</a>
+                                    {% else %}
+                                    <span style="font-size:12px;color:#94a3b8;">{{ c.status }}</span>
+                                    {% endif %}
+                                    <a href="{{ url_for('admin_delete_item', table='claim_requests', item_id=c.id, admin_id=admin.id) }}"
+                                       class="btn-delete"
+                                       onclick="return confirm('Delete this claim?')">🗑</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="empty-row"><td colspan="7">No claim requests yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- LOST ITEMS -->
+    <div class="section">
+        <div class="section-head">
+            <h2>📦 Recent Lost Items</h2>
+            <span>Last 10</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Item</th>
+                        <th>Reported By</th>
+                        <th>Category</th>
+                        <th>Date Lost</th>
+                        <th>Status</th>
+                        <th>Update Status</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if lost_items %}
+                        {% for item in lost_items %}
+                        <tr>
+                            <td style="color:#94a3b8;">{{ item.id }}</td>
+                            <td>
+                                <div class="item-cell">
+                                    <div class="row-img">
+                                        {% if item.image %}<img src="{{ url_for('static', filename='uploads/lost_items/' + item.image) }}" alt="">
+                                        {% else %}📦{% endif %}
+                                    </div>
+                                    <span class="td-item">{{ item.item_name }}</span>
+                                </div>
+                            </td>
+                            <td>{{ item.reporter_name }}</td>
+                            <td>{{ item.category }}</td>
+                            <td style="white-space:nowrap;">{{ item.date_lost.strftime('%d %b %Y') }}</td>
+                            <td><span class="s-pill {% if item.status == 'Searching' %}s-searching{% elif item.status == 'Found' %}s-found{% elif item.status == 'Available' %}s-available{% elif item.status == 'Claimed' %}s-claimed{% else %}s-closed{% endif %}">{{ item.status }}</span></td>
+                            <td>
+                                <form action="{{ url_for('admin_update_lost_status', item_id=item.id, admin_id=admin.id) }}" method="POST" class="status-form">
+                                    <select name="status">
+                                        <option {% if item.status == 'Searching' %}selected{% endif %}>Searching</option>
+                                        <option {% if item.status == 'Found'     %}selected{% endif %}>Found</option>
+                                        <option {% if item.status == 'Closed'    %}selected{% endif %}>Closed</option>
+                                    </select>
+                                    <button type="submit">Save</button>
+                                </form>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin_delete_item', table='lost_items', item_id=item.id, admin_id=admin.id) }}"
+                                   class="btn-delete"
+                                   onclick="return confirm('Delete this lost item?')">🗑 Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="empty-row"><td colspan="8">No lost items yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- FOUND ITEMS -->
+    <div class="section">
+        <div class="section-head">
+            <h2>✅ Recent Found Items</h2>
+            <span>Last 10</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Item</th>
+                        <th>Reported By</th>
+                        <th>Location</th>
+                        <th>Date Found</th>
+                        <th>Status</th>
+                        <th>Update Status</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if found_items %}
+                        {% for item in found_items %}
+                        <tr>
+                            <td style="color:#94a3b8;">{{ item.id }}</td>
+                            <td>
+                                <div class="item-cell">
+                                    <div class="row-img">
+                                        {% if item.image %}<img src="{{ url_for('static', filename='uploads/found_items/' + item.image) }}" alt="">
+                                        {% else %}📦{% endif %}
+                                    </div>
+                                    <span class="td-item">{{ item.item_name }}</span>
+                                </div>
+                            </td>
+                            <td>{{ item.reporter_name }}</td>
+                            <td>{{ item.location_found }}</td>
+                            <td style="white-space:nowrap;">{{ item.date_found.strftime('%d %b %Y') }}</td>
+                            <td><span class="s-pill {% if item.status == 'Searching' %}s-searching{% elif item.status == 'Found' %}s-found{% elif item.status == 'Available' %}s-available{% elif item.status == 'Claimed' %}s-claimed{% else %}s-closed{% endif %}">{{ item.status }}</span></td>
+                            <td>
+                                <form action="{{ url_for('admin_update_found_status', item_id=item.id, admin_id=admin.id) }}" method="POST" class="status-form">
+                                    <select name="status">
+                                        <option {% if item.status == 'Available' %}selected{% endif %}>Available</option>
+                                        <option {% if item.status == 'Claimed'   %}selected{% endif %}>Claimed</option>
+                                        <option {% if item.status == 'Closed'    %}selected{% endif %}>Closed</option>
+                                    </select>
+                                    <button type="submit">Save</button>
+                                </form>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin_delete_item', table='found_items', item_id=item.id, admin_id=admin.id) }}"
+                                   class="btn-delete"
+                                   onclick="return confirm('Delete this found item?')">🗑 Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="empty-row"><td colspan="8">No found items yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

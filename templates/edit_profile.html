@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --indigo: #5c6ef8;
+            --violet: #a78bfa;
+            --pink: #f472b6;
+            --bg: #0c0f1e;
+            --card-bg: #ffffff;
+            --input-bg: #f5f4ff;
+            --border: #e4e1ff;
+            --text-dark: #13103a;
+            --text-mid: #3d3870;
+            --text-soft: #8a85b8;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before, body::after {
+            content: '';
+            position: fixed; border-radius: 50%;
+            filter: blur(100px); opacity: 0.28; pointer-events: none;
+            animation: orb 10s ease-in-out infinite alternate;
+        }
+        body::before {
+            width: 520px; height: 520px;
+            background: radial-gradient(circle, #5c6ef8, transparent 70%);
+            top: -130px; left: -130px;
+        }
+        body::after {
+            width: 420px; height: 420px;
+            background: radial-gradient(circle, #a78bfa, transparent 70%);
+            bottom: -100px; right: -100px; animation-delay: -5s;
+        }
+        @keyframes orb {
+            from { transform: scale(1) translate(0,0); opacity: 0.28; }
+            to   { transform: scale(1.1) translate(20px,20px); opacity: 0.4; }
+        }
+
+        .bg-dots {
+            position: fixed; inset: 0;
+            background-image: radial-gradient(rgba(92,110,248,0.07) 1px, transparent 1px);
+            background-size: 30px 30px; pointer-events: none;
+        }
+
+        .card {
+            position: relative; z-index: 10;
+            background: var(--card-bg);
+            border-radius: 28px; width: 100%; max-width: 460px;
+            box-shadow:
+                0 0 0 1px rgba(92,110,248,0.1),
+                0 32px 72px rgba(0,0,0,0.38),
+                0 0 80px rgba(92,110,248,0.07);
+            overflow: hidden;
+            animation: rise 0.8s cubic-bezier(0.22,1,0.36,1) both;
+        }
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(28px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Hero pic section ── */
+        .pic-hero {
+            background: linear-gradient(135deg, #5c6ef8 0%, #a78bfa 60%, #f472b6 100%);
+            padding: 32px 32px 68px;
+            text-align: center;
+            position: relative;
+        }
+        .pic-hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background-image:
+                radial-gradient(circle at 15% 25%, rgba(255,255,255,0.1) 0%, transparent 40%),
+                radial-gradient(circle at 85% 75%, rgba(255,255,255,0.07) 0%, transparent 35%);
+        }
+        .pic-hero::after {
+            content: '';
+            position: absolute; bottom: -1px; left: 0; right: 0;
+            height: 60px; background: var(--card-bg);
+            border-radius: 50% 50% 0 0 / 60px 60px 0 0;
+        }
+
+        .page-tag {
+            position: absolute; top: 18px; left: 20px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white; font-size: 0.68rem; font-weight: 600;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            padding: 5px 12px; border-radius: 100px; z-index: 2;
+        }
+
+        /* Avatar preview + upload trigger */
+        .avatar-upload {
+            position: relative;
+            display: inline-block;
+            z-index: 2;
+            cursor: pointer;
+        }
+        .avatar-upload input[type="file"] {
+            position: absolute; inset: 0;
+            opacity: 0; cursor: pointer; border-radius: 50%;
+            width: 100%; height: 100%;
+            z-index: 3;
+        }
+        #preview {
+            width: 100px; height: 100px;
+            border-radius: 50%; object-fit: cover;
+            border: 4px solid white;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+            display: block;
+            transition: filter 0.2s;
+        }
+        .avatar-upload:hover #preview { filter: brightness(0.7); }
+
+        .cam-overlay {
+            position: absolute; inset: 0; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 2;
+        }
+        .avatar-upload:hover .cam-overlay { opacity: 1; }
+        .cam-overlay svg {
+            width: 28px; height: 28px;
+            stroke: white; fill: none; stroke-width: 2;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+        }
+
+        .avatar-ring {
+            position: absolute; inset: -6px; border-radius: 50%;
+            border: 2px dashed rgba(255,255,255,0.5);
+            animation: spin 16s linear infinite; pointer-events: none;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .pic-hero h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.35rem; font-weight: 700; color: white;
+            margin-top: 14px; position: relative; z-index: 2;
+        }
+        .pic-hero p {
+            font-size: 0.75rem; color: rgba(255,255,255,0.6);
+            margin-top: 4px; position: relative; z-index: 2;
+        }
+
+        /* ── Form body ── */
+        .card-body { padding: 8px 32px 32px; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 16px;
+        }
+        .field-full { grid-column: 1 / -1; }
+
+        .field { margin-bottom: 16px; }
+        .field label {
+            display: block;
+            font-size: 0.7rem; font-weight: 600;
+            letter-spacing: 0.07em; text-transform: uppercase;
+            color: var(--text-mid); margin-bottom: 6px;
+        }
+
+        .input-wrap { position: relative; }
+        .input-icon {
+            position: absolute; left: 12px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-soft); display: flex; pointer-events: none;
+        }
+        .input-icon svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 11px 12px 11px 36px;
+            background: var(--input-bg);
+            border: 1.5px solid var(--border);
+            border-radius: 11px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem; color: var(--text-dark);
+            outline: none; appearance: none; -webkit-appearance: none;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+        input::placeholder { color: #b0ccec; }
+        input:focus, select:focus {
+            border-color: var(--indigo);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(92,110,248,0.12);
+        }
+
+        .select-wrap { position: relative; }
+        .select-wrap::after {
+            content: '';
+            position: absolute; right: 12px; top: 50%;
+            transform: translateY(-50%);
+            width: 0; height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid var(--text-soft);
+            pointer-events: none;
+        }
+        .select-wrap select { padding-right: 32px; cursor: pointer; }
+
+        .section-label {
+            font-size: 0.66rem; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--text-soft); margin-bottom: 14px;
+            grid-column: 1 / -1;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        /* flash message */
+        .flash {
+            background: #f0fff5;
+            border: 1px solid #a8edca;
+            border-left: 3px solid #2ecc71;
+            color: #1a7a42;
+            font-size: 0.82rem;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            grid-column: 1 / -1;
+        }
+        .flash.error {
+            background: #fff0f0; border-color: #ffcccc;
+            border-left-color: #e74c3c; color: #c0392b;
+        }
+
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; margin-top: 8px; }
+
+        .btn-save {
+            display: flex; align-items: center; justify-content: center;
+            gap: 7px; flex: 2; padding: 13px;
+            background: linear-gradient(135deg, var(--indigo), var(--violet));
+            color: white; border: none; border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.92rem; font-weight: 500; cursor: pointer;
+            box-shadow: 0 6px 24px rgba(92,110,248,0.38);
+            transition: transform 0.18s, box-shadow 0.18s;
+            text-decoration: none;
+        }
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 32px rgba(92,110,248,0.5);
+        }
+        .btn-save svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
+
+        .btn-cancel {
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px; flex: 1; padding: 13px;
+            background: var(--input-bg);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            text-decoration: none; color: var(--text-mid);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem; font-weight: 500;
+            transition: background 0.18s, border-color 0.18s, color 0.18s;
+        }
+        .btn-cancel:hover {
+            background: #f0f0ff; border-color: #c4bffe; color: var(--indigo);
+        }
+        .btn-cancel svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        @media (max-width: 500px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .field-full { grid-column: 1; }
+            .section-label { grid-column: 1; }
+            .card-body { padding: 8px 20px 24px; }
+        }
+    </style>
+</head>
+<body>
+<div class="bg-dots"></div>
+
+<div class="card">
+
+    <!-- Hero with live pic preview -->
+    <div class="pic-hero">
+        <div class="page-tag">✏ Edit Profile</div>
+
+        <label class="avatar-upload" title="Click to change photo">
+            <div class="avatar-ring"></div>
+            <input type="file" id="picInput" accept="image/*"
+                   onchange="previewPic(this)">
+            <img id="preview"
+                 src="{{ url_for('static', filename='uploads/' + (user.profile_pic if user.profile_pic else 'default.png')) }}"
+                 alt="Profile Picture">
+            <div class="cam-overlay">
+                <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+        </label>
+
+        <h2>{{ user.name }}</h2>
+        <p>Tap the photo to change it</p>
+    </div>
+
+    <div class="card-body">
+        <form action="/update_profile/{{ user.id }}" method="POST" enctype="multipart/form-data">
+
+            <!-- hidden file input driven by avatar click -->
+            <input type="hidden" name="_pic_changed" id="_pic_changed" value="0">
+
+            <div class="form-grid">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% for category, message in messages %}
+                    <div class="flash {{ 'error' if category == 'error' else '' }}">{{ message }}</div>
+                  {% endfor %}
+                {% endwith %}
+
+                <div class="section-label">Personal Info</div>
+
+                <div class="field field-full">
+                    <label>Full Name</label>
+                    <div class="input-wrap">
+                        <span class="input-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
+                        <input type="text" name="name" value="{{ user.name }}" placeholder="Full Name" required>
+                    </div>
+                </div>
+
+                <div class="section-label">Academic Info</div>
+
+                <div class="field field-full">
+                    <label>Department</label>
+                    <div class="input-wrap select-wrap">
+                        <span class="input-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+                        <select name="department" required>
+                            {% for dept in ['CSE','ECE','EEE','MECH','CIVIL','CSE CS','AI & DS','AI & ML','CSE DS','CST','CSE AI','CSN'] %}
+                            <option {{ 'selected' if user.department == dept }}>{{ dept }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Year</label>
+                    <div class="input-wrap select-wrap">
+                        <span class="input-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                        <select name="year" required>
+                            {% for y in ['1st Year','2nd Year','3rd Year','4th Year'] %}
+                            <option {{ 'selected' if user.year == y }}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Section</label>
+                    <div class="input-wrap select-wrap">
+                        <span class="input-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+                        <select name="section" required>
+                            <script>
+                                for(let i=65;i<=75;i++){
+                                    const l=String.fromCharCode(i);
+                                    document.write(`<option ${ '{{ user.section }}' === l ? 'selected' : ''}>${l}</option>`);
+                                }
+                            </script>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="section-label">Contact Info</div>
+
+                <div class="field field-full">
+                    <label>Email</label>
+                    <div class="input-wrap">
+                        <span class="input-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg></span>
+                        <input type="email" name="email" value="{{ user.email }}" placeholder="Email" required>
+                    </div>
+                </div>
+
+                <div class="field field-full">
+                    <label>Mobile Number</label>
+                    <div class="input-wrap">
+                        <span class="input-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>
+                        <input type="text" name="mobile" value="{{ user.mobile }}" placeholder="10-digit number" required>
+                    </div>
+                </div>
+
+                <div class="section-label">Security</div>
+
+                <div class="field field-full">
+                    <label>New Password <span style="font-weight:300;text-transform:none;letter-spacing:0">(leave blank to keep current)</span></label>
+                    <div class="input-wrap">
+                        <span class="input-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                        <input type="password" name="password" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <!-- hidden real file input synced from avatar click -->
+                <input type="file" name="profile_pic" id="realPicInput" accept="image/*" style="display:none">
+
+            </div>
+
+            <div class="btn-row">
+                <a href="javascript:history.back()" class="btn-cancel">
+                    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                    Cancel
+                </a>
+                <a href="/dashboard/{{ user.id }}" class="btn-cancel" style="background:#f0f0ff; border-color:#c4bffe; color:#5c6ef8;">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </a>
+                <button type="submit" class="btn-save">
+                    <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Save Changes
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+// Live preview — sync visible input to hidden real file input for form submission
+function previewPic(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => document.getElementById('preview').src = e.target.result;
+        reader.readAsDataURL(input.files[0]);
+
+        // Transfer the file to the real named input Flask reads
+        const dt = new DataTransfer();
+        dt.items.add(input.files[0]);
+        document.getElementById('realPicInput').files = dt.files;
+        document.getElementById('_pic_changed').value = '1';
+    }
+}
+</script>
+
+</body>
+</html>

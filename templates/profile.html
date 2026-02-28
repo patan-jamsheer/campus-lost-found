@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@300;400;500;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --amber: #f59e0b;
+            --amber-light: #fcd34d;
+            --amber-dark: #b45309;
+            --teal: #0d9488;
+            --teal-light: #5eead4;
+            --coral: #f97316;
+            --bg: #0a0a0f;
+            --card-bg: #f9f7f2;
+            --input-bg: #f0ede6;
+            --border: #e2ddd4;
+            --text-dark: #1a1612;
+            --text-mid: #4a3f2f;
+            --text-soft: #9c8f7a;
+            --gold: #c9a84c;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&display=swap');
+
+        body {
+            font-family: 'DM Sans', 'Cabinet Grotesk', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated noise grain overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+            animation: grain 0.5s steps(2) infinite;
+        }
+
+        @keyframes grain {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-2%, -3%); }
+            20% { transform: translate(3%, 2%); }
+            30% { transform: translate(-1%, 4%); }
+            40% { transform: translate(2%, -1%); }
+            50% { transform: translate(-3%, 1%); }
+            60% { transform: translate(1%, 3%); }
+            70% { transform: translate(-2%, -2%); }
+            80% { transform: translate(4%, 1%); }
+            90% { transform: translate(-1%, -3%); }
+        }
+
+        /* Atmospheric background blobs */
+        body::after {
+            content: '';
+            position: fixed;
+            width: 600px; height: 600px;
+            background: conic-gradient(from 0deg, #f59e0b22, #0d948822, #f9731622, #f59e0b22);
+            border-radius: 50%;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            filter: blur(120px);
+            opacity: 0.6;
+            pointer-events: none;
+            animation: pulse-bg 8s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+
+        @keyframes pulse-bg {
+            from { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 0.5; }
+            to   { transform: translate(-50%, -50%) scale(1.2) rotate(180deg); opacity: 0.8; }
+        }
+
+        /* Floating lost item decorations */
+        .bg-dots {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .bg-dots::before {
+            content: '🔑 💼 📱 🎒 💳 📒 🎧 ⌚';
+            position: absolute;
+            font-size: 1.4rem;
+            letter-spacing: 4rem;
+            white-space: nowrap;
+            top: 15%;
+            left: -10%;
+            opacity: 0.07;
+            animation: float-items 25s linear infinite;
+            filter: grayscale(1);
+        }
+
+        .bg-dots::after {
+            content: '💡 🔖 📓 🖊️ 📎 🧳 💻 🔒';
+            position: absolute;
+            font-size: 1.2rem;
+            letter-spacing: 3rem;
+            white-space: nowrap;
+            bottom: 20%;
+            left: -10%;
+            opacity: 0.06;
+            animation: float-items 30s linear infinite 10s;
+            filter: grayscale(1);
+        }
+
+        @keyframes float-items {
+            from { transform: translateX(0); }
+            to   { transform: translateX(120vw); }
+        }
+
+        /* === CARD === */
+        .card {
+            position: relative;
+            z-index: 10;
+            background: var(--card-bg);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow:
+                0 0 0 1px rgba(201,168,76,0.2),
+                0 0 0 4px rgba(201,168,76,0.06),
+                0 40px 80px rgba(0,0,0,0.55),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+            overflow: hidden;
+            animation: rise 0.9s cubic-bezier(0.16,1,0.3,1) both;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(40px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Shimmer border effect */
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            padding: 1.5px;
+            background: linear-gradient(135deg, 
+                rgba(245,158,11,0.6) 0%, 
+                rgba(13,148,136,0.4) 30%, 
+                rgba(249,115,22,0.5) 60%,
+                rgba(201,168,76,0.7) 100%
+            );
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            z-index: 20;
+            animation: shimmer-border 4s linear infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes shimmer-border {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* ── Hero ── */
+        .card-hero {
+            background: linear-gradient(150deg, 
+                #1a1208 0%, 
+                #2d1f08 25%,
+                #1a2820 55%, 
+                #0a1a18 100%
+            );
+            padding: 36px 32px 80px;
+            position: relative;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        /* Topographic / circuit lines in hero */
+        .card-hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background-image:
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 40px,
+                    rgba(245,158,11,0.04) 40px,
+                    rgba(245,158,11,0.04) 41px
+                ),
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 40px,
+                    rgba(13,148,136,0.04) 40px,
+                    rgba(13,148,136,0.04) 41px
+                );
+            pointer-events: none;
+        }
+
+        /* Radial gold glow center */
+        .card-hero::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 64px;
+            background: var(--card-bg);
+            border-radius: 50% 50% 0 0 / 64px 64px 0 0;
+        }
+
+        /* Scanning line animation in hero */
+        .card-hero .scan-line {
+            display: none;
+        }
+
+        /* We'll use a pseudo on card-hero for scan */
+        .card-hero > *:first-child::before {
+            display: none;
+        }
+
+        .role-badge {
+            position: absolute;
+            top: 18px; right: 20px;
+            background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(245,158,11,0.35);
+            color: var(--amber-light);
+            font-size: 0.64rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            padding: 5px 12px;
+            border-radius: 100px;
+            z-index: 2;
+            text-shadow: 0 0 10px rgba(245,158,11,0.4);
+            animation: badge-glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes badge-glow {
+            from { box-shadow: 0 0 8px rgba(245,158,11,0.2); }
+            to   { box-shadow: 0 0 18px rgba(245,158,11,0.45), inset 0 0 8px rgba(245,158,11,0.1); }
+        }
+
+        .edit-hero-btn {
+            position: absolute;
+            top: 18px; left: 20px;
+            background: rgba(255,255,255,0.07);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.75);
+            font-size: 0.64rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 5px 12px;
+            border-radius: 100px;
+            z-index: 2;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.25s ease;
+        }
+        .edit-hero-btn:hover { 
+            background: rgba(245,158,11,0.18); 
+            border-color: rgba(245,158,11,0.45);
+            color: var(--amber-light);
+            box-shadow: 0 0 14px rgba(245,158,11,0.2);
+        }
+        .edit-hero-btn svg {
+            width: 12px; height: 12px;
+            stroke: currentColor; fill: none; stroke-width: 2.5;
+        }
+
+        /* Avatar */
+        .avatar-wrap {
+            position: relative;
+            display: inline-block;
+            z-index: 2;
+            cursor: pointer;
+        }
+        .avatar-wrap img {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid transparent;
+            background-clip: padding-box;
+            box-shadow: 
+                0 0 0 3px rgba(245,158,11,0.5),
+                0 0 30px rgba(245,158,11,0.25),
+                0 8px 32px rgba(0,0,0,0.4);
+            display: block;
+            transition: all 0.3s ease;
+        }
+        .avatar-wrap:hover img { 
+            filter: brightness(0.65) saturate(0.5);
+            box-shadow: 
+                0 0 0 3px rgba(245,158,11,0.8),
+                0 0 50px rgba(245,158,11,0.4),
+                0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.25s;
+            pointer-events: none;
+        }
+        .avatar-wrap:hover .avatar-overlay { opacity: 1; }
+        .avatar-overlay svg {
+            width: 26px; height: 26px;
+            stroke: var(--amber-light); fill: none; stroke-width: 2;
+            filter: drop-shadow(0 2px 8px rgba(245,158,11,0.6));
+        }
+
+        /* Spinning ring — golden dashes */
+        .avatar-ring {
+            position: absolute; inset: -8px;
+            border-radius: 50%;
+            border: 2px dashed rgba(245,158,11,0.45);
+            animation: spin 18s linear infinite;
+        }
+
+        /* Second counter-rotating ring */
+        .avatar-ring::after {
+            content: '';
+            position: absolute; inset: 4px;
+            border-radius: 50%;
+            border: 1px dotted rgba(13,148,136,0.3);
+            animation: spin 12s linear infinite reverse;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .online-dot {
+            position: absolute; bottom: 4px; right: 4px;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #34d399, #059669);
+            border: 3px solid #1a1208;
+            box-shadow: 0 0 8px rgba(52,211,153,0.5);
+            animation: pulse-dot 2.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 6px rgba(52,211,153,0.4); }
+            50% { box-shadow: 0 0 14px rgba(52,211,153,0.7), 0 0 22px rgba(52,211,153,0.2); }
+        }
+
+        .card-hero h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.55rem; font-weight: 800;
+            color: #f5f0e8; 
+            margin-top: 14px;
+            position: relative; z-index: 2;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.4);
+        }
+
+        .hero-sub {
+            font-size: 0.78rem;
+            color: rgba(245,210,110,0.55);
+            margin-top: 5px; font-weight: 400;
+            position: relative; z-index: 2;
+            letter-spacing: 0.04em;
+        }
+
+        /* ── Body ── */
+        .card-body { padding: 14px 32px 32px; }
+
+        .chips {
+            display: flex;
+            justify-content: center;
+            gap: 7px; flex-wrap: wrap;
+            margin-bottom: 26px;
+        }
+
+        .chip {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid rgba(180,131,9,0.25);
+            border-radius: 100px;
+            padding: 5px 13px;
+            font-size: 0.73rem; font-weight: 600;
+            color: #92400e;
+            display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 2px 6px rgba(245,158,11,0.12);
+            transition: all 0.2s ease;
+            letter-spacing: 0.01em;
+        }
+
+        .chip:hover {
+            background: linear-gradient(135deg, #fde68a, #fcd34d);
+            box-shadow: 0 4px 12px rgba(245,158,11,0.22);
+            transform: translateY(-1px);
+        }
+
+        .chip svg {
+            width: 12px; height: 12px;
+            stroke: #b45309; fill: none; stroke-width: 2.2; flex-shrink: 0;
+        }
+
+        .info-section-label {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.16em; text-transform: uppercase;
+            color: var(--text-soft); margin-bottom: 10px;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .info-section-label::after {
+            content: ''; flex: 1; height: 1px; 
+            background: linear-gradient(90deg, var(--border), transparent);
+        }
+
+        .info-row {
+            display: flex; align-items: center;
+            padding: 10px 13px; border-radius: 14px;
+            margin-bottom: 5px; transition: all 0.22s ease; gap: 12px;
+            border: 1px solid transparent;
+        }
+
+        .info-row:hover { 
+            background: linear-gradient(135deg, #fef9f0, #f0fdf9); 
+            border-color: rgba(245,158,11,0.15);
+            box-shadow: 0 2px 12px rgba(245,158,11,0.07), inset 0 1px 0 rgba(255,255,255,0.8);
+            transform: translateX(3px);
+        }
+
+        .info-icon {
+            width: 36px; height: 36px; border-radius: 11px;
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid rgba(180,131,9,0.2);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(245,158,11,0.15);
+            transition: all 0.22s ease;
+        }
+
+        .info-row:hover .info-icon {
+            background: linear-gradient(135deg, #fde68a, #fcd34d);
+            box-shadow: 0 4px 14px rgba(245,158,11,0.25);
+            transform: rotate(4deg) scale(1.05);
+        }
+
+        .info-icon svg { 
+            width: 15px; height: 15px; 
+            stroke: #b45309; fill: none; stroke-width: 2.2; 
+        }
+
+        .info-text { flex: 1; }
+
+        .info-label {
+            font-size: 0.64rem; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--text-soft); line-height: 1; margin-bottom: 3px;
+        }
+
+        .info-value { 
+            font-size: 0.88rem; font-weight: 500; 
+            color: var(--text-dark);
+            letter-spacing: -0.01em;
+        }
+
+        .divider { 
+            height: 1px; 
+            background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+            margin: 18px 0; 
+        }
+
+        /* Action row */
+        .action-row { display: flex; gap: 9px; }
+
+        .back-btn, .logout-btn {
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px; flex: 1; padding: 12px;
+            background: var(--input-bg); 
+            border: 1.5px solid var(--border);
+            border-radius: 13px; text-decoration: none;
+            color: var(--text-mid); font-family: 'DM Sans', sans-serif;
+            font-size: 0.84rem; font-weight: 500;
+            transition: all 0.22s cubic-bezier(0.34,1.56,0.64,1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Shine sweep on hover */
+        .back-btn::after, .logout-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 60%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.4s ease;
+            pointer-events: none;
+        }
+
+        .back-btn:hover::after, .logout-btn:hover::after {
+            left: 140%;
+        }
+
+        .back-btn svg, .logout-btn svg {
+            width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.2;
+        }
+
+        .back-btn:hover {
+            background: linear-gradient(135deg, #fef3c7, #fde68a); 
+            border-color: rgba(180,131,9,0.35);
+            color: #92400e; 
+            box-shadow: 0 6px 20px rgba(245,158,11,0.2);
+            transform: translateY(-2px);
+        }
+
+        .logout-btn:hover {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2); 
+            border-color: rgba(239,68,68,0.3);
+            color: #b91c1c; 
+            box-shadow: 0 6px 20px rgba(239,68,68,0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Dashboard button special state */
+        .back-btn[href*="dashboard"] {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-color: rgba(13,148,136,0.25);
+            color: #0f766e;
+        }
+
+        .back-btn[href*="dashboard"]:hover {
+            background: linear-gradient(135deg, #ccfbf1, #99f6e4);
+            border-color: rgba(13,148,136,0.45);
+            color: #0d6b60;
+            box-shadow: 0 6px 20px rgba(13,148,136,0.2);
+        }
+
+        .joined-note {
+            text-align: center; font-size: 0.72rem;
+            color: var(--text-soft); margin-top: 16px; font-weight: 300;
+            letter-spacing: 0.02em;
+        }
+        .joined-note strong { 
+            color: var(--text-mid); font-weight: 600;
+            background: linear-gradient(135deg, #b45309, #d97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Stagger animation for card body children */
+        .card-body > * {
+            animation: slide-up 0.6s cubic-bezier(0.16,1,0.3,1) both;
+        }
+
+        .card-body > *:nth-child(1) { animation-delay: 0.15s; }
+        .card-body > *:nth-child(2) { animation-delay: 0.2s; }
+        .card-body > *:nth-child(3) { animation-delay: 0.25s; }
+        .card-body > *:nth-child(4) { animation-delay: 0.3s; }
+        .card-body > *:nth-child(5) { animation-delay: 0.32s; }
+        .card-body > *:nth-child(6) { animation-delay: 0.34s; }
+        .card-body > *:nth-child(7) { animation-delay: 0.38s; }
+        .card-body > *:nth-child(8) { animation-delay: 0.42s; }
+        .card-body > *:nth-child(9) { animation-delay: 0.46s; }
+        .card-body > *:nth-child(10) { animation-delay: 0.5s; }
+        .card-body > *:nth-child(11) { animation-delay: 0.54s; }
+
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Hero content stagger */
+        .card-hero .edit-hero-btn { animation: fade-in 0.5s ease 0.3s both; }
+        .card-hero .role-badge { animation: fade-in 0.5s ease 0.35s both; }
+        .card-hero .avatar-wrap { animation: scale-in 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.2s both; }
+        .card-hero h2 { animation: fade-in 0.5s ease 0.45s both; }
+        .card-hero .hero-sub { animation: fade-in 0.5s ease 0.5s both; }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes scale-in {
+            from { opacity: 0; transform: scale(0.75); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        /* Scan-line effect across whole card periodically */
+        .card-hero > .avatar-ring {
+            display: none; /* avatar-ring is inside avatar-wrap, not hero */
+        }
+    </style>
+</head>
+<body>
+<div class="bg-dots"></div>
+
+<div class="card">
+
+    <div class="card-hero">
+
+        <!-- Edit Profile btn (top-left) -->
+        <a href="/edit_profile/{{ user.id }}" class="edit-hero-btn">
+            <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit Profile
+        </a>
+
+        <div class="role-badge">{{ user.role }}</div>
+
+        <!-- Clickable avatar → goes to edit profile -->
+        <a href="/edit_profile/{{ user.id }}" class="avatar-wrap" title="Change profile picture">
+            <div class="avatar-ring"></div>
+            <img src="{{ url_for('static', filename='uploads/' + (user.profile_pic if user.profile_pic else 'default.png')) }}" alt="Profile Picture">
+            <div class="avatar-overlay">
+                <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+            <div class="online-dot"></div>
+        </a>
+
+        <h2>{{ user.name }}</h2>
+        <p class="hero-sub">{{ user.department }} &nbsp;·&nbsp; {{ user.year }}</p>
+    </div>
+
+    <div class="card-body">
+
+        <div class="chips">
+            <div class="chip">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Section {{ user.section }}
+            </div>
+            <div class="chip">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                {{ user.year }}
+            </div>
+            <div class="chip">
+                <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/></svg>
+                {{ user.department }}
+            </div>
+        </div>
+
+        <div class="info-section-label">Contact Details</div>
+
+        <div class="info-row">
+            <div class="info-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg></div>
+            <div class="info-text">
+                <div class="info-label">Email</div>
+                <div class="info-value">{{ user.email }}</div>
+            </div>
+        </div>
+
+        <div class="info-row">
+            <div class="info-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+            <div class="info-text">
+                <div class="info-label">Mobile</div>
+                <div class="info-value">{{ user.mobile }}</div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="info-section-label">Academic Details</div>
+
+        <div class="info-row">
+            <div class="info-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+            <div class="info-text">
+                <div class="info-label">Department</div>
+                <div class="info-value">{{ user.department }}</div>
+            </div>
+        </div>
+
+        <div class="info-row">
+            <div class="info-icon"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+            <div class="info-text">
+                <div class="info-label">Role</div>
+                <div class="info-value">{{ user.role }}</div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="action-row">
+            <a href="javascript:history.back()" class="back-btn">
+                <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                Go Back
+            </a>
+            <a href="/dashboard/{{ user.id }}" class="back-btn" style="background:#f0fdf4; border-color:rgba(13,148,136,0.25); color:#0f766e;">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Dashboard
+            </a>
+            <a href="/logout" class="logout-btn">
+                <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign Out
+            </a>
+        </div>
+
+        <p class="joined-note">Member since <strong>{{ user.created_at }}</strong></p>
+    </div>
+</div>
+
+</body>
+</html>
