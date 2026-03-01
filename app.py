@@ -23,14 +23,6 @@ def upload_to_cloudinary(file, folder):
         print(f"Cloudinary upload error: {e}", flush=True)
         return None
 
-def upload_to_cloudinary(file, folder):
-    try:
-        result = cloudinary.uploader.upload(file, folder=folder)
-        return result["secure_url"]
-    except Exception as e:
-        print(f"Cloudinary upload error: {e}", flush=True)
-        return None
-
 app = Flask(__name__)
 app.secret_key = "campus_secret_key_2024"
 
