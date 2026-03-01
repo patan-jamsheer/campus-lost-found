@@ -767,5 +767,18 @@ def delete_found_item(item_id, user_id):
 
 
 # ════════════════════════════════════════════════════════════
+
+@app.route("/run-migration-xyz123")
+def run_migration():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("ALTER TABLE users ADD COLUMN email_notifications TINYINT(1) DEFAULT 1")
+        conn.commit()
+        cursor.close(); conn.close()
+        return "✅ Migration done!"
+    except Exception as e:
+        return f"Note: {str(e)}"
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
