@@ -66,7 +66,7 @@
 
     <div class="profile-card">
         <a href="{{ url_for('profile', user_id=user.id) }}" class="avatar-wrap">
-            <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" alt="Profile">
+            <img src="{{ user.profile_pic if user.profile_pic.startswith('http') else url_for('static', filename='uploads/' + user.profile_pic) }}" alt="Profile">
             <span class="avatar-badge"></span>
         </a>
         <div class="profile-name">{{ user.name }}</div>

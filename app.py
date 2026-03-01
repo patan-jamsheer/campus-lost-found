@@ -5,6 +5,15 @@ import os
 import threading
 from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message
+import cloudinary
+import cloudinary.uploader
+
+# Cloudinary config
+cloudinary.config(
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "dw6keiyo1"),
+    api_key = os.environ.get("CLOUDINARY_API_KEY", "423793747938516"),
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET", "yFt90ChJKkFs8f1NBB4bLLmZI-g")
+)
 
 app = Flask(__name__)
 app.secret_key = "campus_secret_key_2024"
