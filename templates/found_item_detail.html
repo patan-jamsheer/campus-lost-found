@@ -144,7 +144,7 @@
         <div style="display:flex;flex-direction:column;gap:20px;">
             <div class="detail-card">
                 {% if item.image %}
-                    <img class="detail-img" src="{{ url_for('static', filename='uploads/found_items/' + item.image) }}" alt="{{ item.item_name }}">
+                    <img class="detail-img" src="{{ item.image if item.image and item.image.startswith('http') else url_for('static', filename='uploads/found_items/' + item.image) if item.image else '' }}" alt="{{ item.item_name }}">
                 {% else %}
                     <div class="detail-img-placeholder"><span class="icon">📦</span><span>No photo uploaded</span></div>
                 {% endif %}

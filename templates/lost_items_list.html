@@ -165,7 +165,7 @@
             <a href="{{ url_for('lost_item_detail', item_id=item.id, viewer_id=user.id) }}"
                class="item-card" style="animation-delay: {{ loop.index0 * 0.05 }}s">
                 {% if item.image %}
-                    <img class="card-img" src="{{ url_for('static', filename='uploads/lost_items/' + item.image) }}" alt="{{ item.item_name }}">
+                    <img class="card-img" src="{{ item.image if item.image and item.image.startswith('http') else url_for('static', filename='uploads/lost_items/' + item.image) if item.image else '' }}" alt="{{ item.item_name }}">
                 {% else %}
                     <div class="card-img-placeholder"><span>📦</span><small>No photo</small></div>
                 {% endif %}

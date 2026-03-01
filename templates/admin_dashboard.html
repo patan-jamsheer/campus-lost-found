@@ -259,7 +259,7 @@
                             <td>
                                 <div class="item-cell">
                                     <div class="row-img">
-                                        {% if item.image %}<img src="{{ url_for('static', filename='uploads/lost_items/' + item.image) }}" alt="">
+                                        {% if item.image %}<img src="{{ item.image if item.image and item.image.startswith('http') else url_for('static', filename='uploads/lost_items/' + item.image) if item.image else '' }}" alt="">
                                         {% else %}📦{% endif %}
                                     </div>
                                     <span class="td-item">{{ item.item_name }}</span>
@@ -322,7 +322,7 @@
                             <td>
                                 <div class="item-cell">
                                     <div class="row-img">
-                                        {% if item.image %}<img src="{{ url_for('static', filename='uploads/found_items/' + item.image) }}" alt="">
+                                        {% if item.image %}<img src="{{ item.image if item.image and item.image.startswith('http') else url_for('static', filename='uploads/found_items/' + item.image) if item.image else '' }}" alt="">
                                         {% else %}📦{% endif %}
                                     </div>
                                     <span class="td-item">{{ item.item_name }}</span>

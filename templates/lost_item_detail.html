@@ -233,7 +233,7 @@
                     <div class="card-section-head">Photo</div>
                     <div>
                         {% if item.image %}
-                            <img class="item-main-img" src="{{ url_for('static', filename='uploads/lost_items/' + item.image) }}" alt="{{ item.item_name }}">
+                            <img class="item-main-img" src="{{ item.image if item.image and item.image.startswith('http') else url_for('static', filename='uploads/lost_items/' + item.image) if item.image else '' }}" alt="{{ item.item_name }}">
                         {% else %}
                             <div class="no-img-block">
                                 <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
