@@ -15,6 +15,22 @@ cloudinary.config(
     api_secret = os.environ.get("CLOUDINARY_API_SECRET", "yFt90ChJKkFs8f1NBB4bLLmZI-g")
 )
 
+def upload_to_cloudinary(file, folder):
+    try:
+        result = cloudinary.uploader.upload(file, folder=folder)
+        return result["secure_url"]
+    except Exception as e:
+        print(f"Cloudinary upload error: {e}", flush=True)
+        return None
+
+def upload_to_cloudinary(file, folder):
+    try:
+        result = cloudinary.uploader.upload(file, folder=folder)
+        return result["secure_url"]
+    except Exception as e:
+        print(f"Cloudinary upload error: {e}", flush=True)
+        return None
+
 app = Flask(__name__)
 app.secret_key = "campus_secret_key_2024"
 
@@ -136,8 +152,7 @@ def register():
     file = request.files.get("profile_pic")
     filename = "default.jpeg"
     if file and file.filename:
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(UPLOAD_FOLDER, filename))
+        filename = upload_to_cloudinary(file, "profiles") or "default.jpeg"
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -240,9 +255,7 @@ def update_profile(user_id):
     if pic_changed == "1":
         file = request.files.get("profile_pic")
         if file and file.filename:
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(UPLOAD_FOLDER, filename))
-            profile_pic = filename
+            profile_pic = upload_to_cloudinary(file, "profiles") or user["profile_pic"]
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -299,8 +312,7 @@ def submit_report_lost():
     image_filename = None
     file = request.files.get("image")
     if file and file.filename:
-        image_filename = secure_filename(file.filename)
-        file.save(os.path.join(LOST_ITEM_UPLOAD_FOLDER, image_filename))
+        image_filename = upload_to_cloudinary(file, "lost_items")
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -414,8 +426,7 @@ def submit_report_found():
     image_filename = None
     file = request.files.get("image")
     if file and file.filename:
-        image_filename = secure_filename(file.filename)
-        file.save(os.path.join(FOUND_ITEM_UPLOAD_FOLDER, image_filename))
+        image_filename = upload_to_cloudinary(file, "found_items")
 
     conn = get_db_connection()
     cursor = conn.cursor()
