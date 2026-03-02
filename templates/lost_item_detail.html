@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ item.item_name }} — Lost Item</title>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -164,9 +165,67 @@
             .content-grid { grid-template-columns: 1fr; }
             .hero-title { font-size: 1.6rem; }
         }
-    </style>
+    
+        /* ── HAMBURGER MENU (RESPONSIVE) ── */
+        .hamburger {
+            display: none;
+            position: fixed;
+            top: 14px; left: 14px;
+            z-index: 200;
+            background: #080c14;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            width: 42px; height: 42px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .hamburger span {
+            display: block;
+            width: 20px; height: 2px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+        .sidebar-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 99;
+        }
+        .sidebar-overlay.show { display: block; }
+        @media (max-width: 900px) {
+            .hamburger { display: flex; }
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                display: flex !important;
+                z-index: 150;
+            }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-left: 0 !important; padding: 20px 16px !important; padding-top: 66px !important; }
+        }
+
+        
+        @media (max-width: 640px) {
+            .info-grid, .page-layout, .content-grid { grid-template-columns: 1fr !important; }
+            .contact-card { position: static !important; }
+        }
+
+        </style>
 </head>
 <body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu">
+    <span></span><span></span><span></span>
+</button>
+
 
 <!-- ── SIDEBAR ── -->
 <div class="sidebar">
