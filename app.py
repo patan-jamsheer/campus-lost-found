@@ -380,7 +380,7 @@ def lost_items_list(user_id):
     cursor.close(); conn.close()
 
     return render_template("lost_items_list.html",
-        user=user, items=items, total=len(items, current_user=g.current_user),
+        user=user, items=items, total=len(items), current_user=g.current_user,
         counts=counts, categories=CATEGORIES,
         filters={"search": search, "category": category, "status": status}
     )
@@ -497,7 +497,7 @@ def found_items_list(user_id):
     cursor.close(); conn.close()
 
     return render_template("found_items_list.html",
-        user=user, items=items, total=len(items, current_user=g.current_user),
+        user=user, items=items, total=len(items), current_user=g.current_user,
         counts={"available": available, "claimed": claimed, "closed": closed},
         categories=CATEGORIES,
         filters={"search": search, "category": category, "status": status}
