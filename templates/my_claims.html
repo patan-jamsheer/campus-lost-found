@@ -68,7 +68,7 @@
         .empty a { display: inline-block; margin-top: 18px; padding: 12px 24px; background: #0ea5e9; color: white; border-radius: 10px; text-decoration: none; font-weight: 600; }
         
     
-        /* ── HAMBURGER MENU (RESPONSIVE) ── */
+        
         .hamburger {
             display: none;
             position: fixed;
@@ -118,12 +118,73 @@
             .claim-img { width: 100% !important; height: 160px; }
         }
 
+        
+        /* =============================================
+           MOBILE RESPONSIVE - DO NOT REMOVE
+        ============================================= */
+        .hamburger-btn {
+            display: none;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 9999;
+            width: 44px;
+            height: 44px;
+            background: #0f172a;
+            border: 1.5px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .hamburger-btn span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: white;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        .mob-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 998;
+        }
+        @media (max-width: 900px) {
+            .hamburger-btn { display: flex !important; }
+            .sidebar {
+                display: flex !important;
+                position: fixed !important;
+                left: 0 !important; top: 0 !important;
+                transform: translateX(-110%) !important;
+                transition: transform 0.3s ease !important;
+                z-index: 999 !important;
+                height: 100vh !important;
+                width: 270px !important;
+            }
+            .sidebar.mob-open {
+                transform: translateX(0) !important;
+            }
+            .mob-overlay.mob-show { display: block !important; }
+            .main {
+                margin-left: 0 !important;
+                padding: 16px !important;
+                padding-top: 68px !important;
+            }
+        }
+        /* ============================================= */
+
         </style>
 </head>
 <body>
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-<button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu">
-    <span></span><span></span><span></span>
+<div class="mob-overlay" id="mobOverlay" onclick="mobClose()"></div>
+<button class="hamburger-btn" onclick="mobToggle()" id="mobBtn">
+  <span></span><span></span><span></span>
 </button>
 
 <div class="sidebar">
@@ -215,5 +276,15 @@
 
 
 <div style="text-align:center; padding:15px; background:#1a1a2e; color:#fff; font-size:14px; margin-top:20px;">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
+<script>
+function mobToggle(){
+  document.querySelector('.sidebar').classList.toggle('mob-open');
+  document.getElementById('mobOverlay').classList.toggle('mob-show');
+}
+function mobClose(){
+  document.querySelector('.sidebar').classList.remove('mob-open');
+  document.getElementById('mobOverlay').classList.remove('mob-show');
+}
+</script>
 </body>
 </html>
