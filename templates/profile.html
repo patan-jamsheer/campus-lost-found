@@ -720,7 +720,7 @@
                 <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
                 Go Back
             </a>
-            <a href="/dashboard/{{ user.id }}" class="back-btn" style="background:#f0fdf4; border-color:rgba(13,148,136,0.25); color:#0f766e;">
+            <a href="{{ url_for('admin_dashboard', admin_id=current_user.id) if current_user and current_user.role == 'Admin' else url_for('dashboard_user', user_id=current_user.id if current_user else user.id) }}" class="back-btn" style="background:#f0fdf4; border-color:rgba(13,148,136,0.25); color:#0f766e;">
                 <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 Dashboard
             </a>
