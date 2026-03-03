@@ -159,7 +159,8 @@ def register():
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, ("Student", name, department, year, section, email, mobile, password, filename))
     cursor.close(); conn.close()
-    return render_template("signup.html", success="Account created! Redirecting to login...")
+    flash("Account created successfully! Please login.", "success")
+    return redirect(url_for('home'))
 
 
 @app.route("/login", methods=["POST"])
@@ -326,7 +327,7 @@ def submit_report_lost():
                 f"📝 Details  : {description}\n"
                 f"📅 Lost On  : {date_lost}\n\n"
                 f"Have you seen it? Log in and help them out!\n"
-                f"👉 https://campus-lost-found-app.onrender.com/lost_items/{user_id}\n\n"
+                f"👉 https://campus-lost-found-app.onrender.com\n\n"
                 f"— Campus Lost & Found Team"
             ),
             recipient_list=all_emails
@@ -441,7 +442,7 @@ def submit_report_found():
                 f"📍 Found At      : {location_found}\n"
                 f"📅 Date Found    : {date_found}\n\n"
                 f"Think it's yours? Log in and submit a claim!\n"
-                f"👉 https://campus-lost-found-app.onrender.com/found_items/{user_id}\n\n"
+                f"👉 https://campus-lost-found-app.onrender.com\n\n"
                 f"— Campus Lost & Found Team"
             ),
             recipient_list=all_emails
@@ -764,6 +765,62 @@ def delete_found_item(item_id, user_id):
     if user["role"] == "Admin":
         return redirect(url_for("admin_dashboard", admin_id=user_id))
     return redirect(url_for("found_items_list", user_id=user_id))
+
+
+
+import random as _random
+import string as _string
+
+@app.route("/forgot_password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "GET":
+        return render_template("forgot_password.html")
+    email = request.form.get("email", "").strip()
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+    user = cursor.fetchone()
+    if not user:
+        cursor.close(); conn.close()
+        return render_template("forgot_password.html", error="No account found with this email address.")
+    temp_password = ''.join(_random.choices(_string.ascii_letters + _string.digits, k=8))
+    cursor.execute("UPDATE users SET password = %s WHERE email = %s", (temp_password, email))
+    cursor.close(); conn.close()
+    send_notification_email(
+        subject="\U0001f510 Password Reset \u2014 Campus Lost & Found",
+        body=(
+            f"Hi {user['name']},\n\n"
+            f"Your temporary password is: {temp_password}\n\n"
+            f"Please login and change it from Edit Profile.\n\n"
+            f"\U0001f449 https://campus-lost-found-app.onrender.com\n\n"
+            f"\u2014 Campus Lost & Found Team"
+        ),
+        recipient_list=[email]
+    )
+    return render_template("forgot_password.html", success=f"Temporary password sent to {email}. Check your inbox!")
+
+
+@app.route("/settings/<int:user_id>")
+def settings(user_id):
+    user = get_user(user_id)
+    if not user:
+        return redirect(url_for('home'))
+    return render_template("settings.html", user=user)
+
+
+@app.route("/api/stats/<int:user_id>")
+def api_stats(user_id):
+    from flask import jsonify
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT COUNT(*) AS n FROM lost_items")
+    lost = cursor.fetchone()['n']
+    cursor.execute("SELECT COUNT(*) AS n FROM found_items")
+    found = cursor.fetchone()['n']
+    cursor.execute("SELECT COUNT(*) AS n FROM claim_requests WHERE claimant_id = %s", (user_id,))
+    claims = cursor.fetchone()['n']
+    cursor.close(); conn.close()
+    return jsonify({"lost": lost, "found": found, "claims": claims})
 
 
 # ════════════════════════════════════════════════════════════
