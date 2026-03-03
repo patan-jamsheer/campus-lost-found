@@ -245,7 +245,7 @@
         <a href="{{ url_for('found_items_list', user_id=user.id) }}" class="nav-item"><span class="nav-icon">📋</span> Browse Found Items</a>
         <a href="{{ url_for('my_claims', user_id=user.id) }}" class="nav-item"><span class="nav-icon">🤝</span> My Claims</a>
         <div class="nav-label">Account</div>
-        <a href="#" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+        <a href="{{ url_for('settings', user_id=user.id) }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
     </nav>
     <a href="{{ url_for('edit_profile', user_id=user.id) }}" class="edit-cta">✏️ Edit Profile</a>
     <a href="/logout" class="logout"><span class="nav-icon">🚪</span> Logout</a>

@@ -131,12 +131,18 @@
     <div class="brand"><div class="brand-icon">🛡️</div><div class="brand-name">Admin<span> Panel</span></div></div>
     <div class="admin-badge"><span>🔐</span><span>{{ admin.name }}</span></div>
     <nav>
-        <div class="nav-label">Admin</div>
+        <div class="nav-label">Admin Panel</div>
         <a href="{{ url_for('admin_dashboard', admin_id=admin.id) }}" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
         <a href="{{ url_for('admin_users', admin_id=admin.id) }}" class="nav-item active"><span class="nav-icon">👥</span> All Users</a>
-        <div class="nav-label">Browse</div>
-        <a href="{{ url_for('lost_items_list', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">🔎</span> Lost Items</a>
-        <a href="{{ url_for('found_items_list', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">📋</span> Found Items</a>
+        <div class="nav-label">Lost & Found</div>
+        <a href="{{ url_for('lost_items_list', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">🔎</span> Lost Items Board</a>
+        <a href="{{ url_for('found_items_list', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">📋</span> Found Items Board</a>
+        <a href="{{ url_for('report_lost', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">📦</span> Report Lost Item</a>
+        <a href="{{ url_for('report_found', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">✅</span> Report Found Item</a>
+        <a href="{{ url_for('my_claims', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">🤝</span> Claims</a>
+        <div class="nav-label">Account</div>
+        <a href="{{ url_for('profile', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">👤</span> My Profile</a>
+        <a href="{{ url_for('settings', user_id=admin.id) }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
     </nav>
     <a href="/logout" class="logout"><span class="nav-icon">🚪</span> Logout</a>
 </div>

@@ -1183,5 +1183,19 @@
 
 
 <div style="text-align:center; padding:15px; background:#1a1a2e; color:#fff; font-size:14px; margin-top:20px;">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
+
+{% if success %}
+<script>
+  document.getElementById('successBox').style.display = 'flex';
+  var count = 3;
+  var cd = document.getElementById('countdown');
+  var timer = setInterval(function(){
+    count--;
+    if(cd) cd.textContent = count;
+    if(count <= 0){ clearInterval(timer); window.location.href = '/'; }
+  }, 1000);
+</script>
+{% endif %}
+
 </body>
 </html>
