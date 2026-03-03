@@ -26,6 +26,9 @@ def upload_to_cloudinary(file, folder):
 app = Flask(__name__)
 app.secret_key = "campus_secret_key_2024"
 
+# ── Global Notification Toggle (Admin controlled) ──
+NOTIFICATIONS_ENABLED = True
+
 # ── Email Config ─────────────────────────────────────────────
 # ⚠️  CHANGE THESE 2 LINES with your Gmail and App Password
 app.config['MAIL_SERVER']         = os.environ.get('MAIL_SERVER', 'smtp-relay.brevo.com')
@@ -329,7 +332,7 @@ def submit_report_lost():
 
     # 🔔 Send email notification to ALL users
     all_emails = get_all_user_emails()
-    if all_emails:
+    if all_emails and NOTIFICATIONS_ENABLED:
         send_notification_email(
             subject=f"🔍 Lost Item Alert: {item_name}",
             body=(
@@ -443,7 +446,7 @@ def submit_report_found():
 
     # 🔔 Send email notification to ALL users
     all_emails = get_all_user_emails()
-    if all_emails:
+    if all_emails and NOTIFICATIONS_ENABLED:
         send_notification_email(
             subject=f"✅ Found Item Alert: {item_name}",
             body=(
@@ -625,6 +628,7 @@ def admin_dashboard(admin_id):
 
     return render_template("admin_dashboard.html",
         admin=admin,
+        notifications_on=NOTIFICATIONS_ENABLED,
         stats={"users": total_users, "lost": total_lost,
                "found": total_found, "pending_claims": pending_claims},
         claims=claims, lost_items=lost_items, found_items=found_items
@@ -834,6 +838,16 @@ def api_stats(user_id):
     cursor.close(); conn.close()
     return jsonify({"lost": lost, "found": found, "claims": claims})
 
+
+
+@app.route("/admin/toggle_notifications/<int:admin_id>", methods=["POST"])
+@admin_required
+def toggle_notifications(admin_id):
+    global NOTIFICATIONS_ENABLED
+    NOTIFICATIONS_ENABLED = not NOTIFICATIONS_ENABLED
+    status = "enabled ✅" if NOTIFICATIONS_ENABLED else "disabled 🔕"
+    flash(f"Email notifications {status} for all users.", "success")
+    return redirect(url_for("admin_dashboard", admin_id=admin_id))
 
 # ════════════════════════════════════════════════════════════
 if __name__ == "__main__":
