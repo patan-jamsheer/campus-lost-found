@@ -289,6 +289,16 @@
             .section-label { grid-column: 1; }
             .card-body { padding: 8px 20px 24px; }
         }
+    
+        /* ── FOOTER FIX ── */
+        body {
+            flex-direction: column !important;
+        }
+        body > div[style*="text-align:center"] {
+            width: 100% !important;
+            flex-shrink: 0 !important;
+        }
+
     </style>
 </head>
 <body>

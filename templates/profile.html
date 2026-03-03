@@ -606,6 +606,22 @@
         .card-hero > .avatar-ring {
             display: none; /* avatar-ring is inside avatar-wrap, not hero */
         }
+    
+        @media (max-width: 500px) {
+            body { padding: 0 !important; align-items: flex-start !important; }
+            .card { border-radius: 0 !important; max-width: 100% !important; min-height: 100vh; }
+        }
+
+    
+        /* ── FOOTER FIX ── */
+        body {
+            flex-direction: column !important;
+        }
+        body > div[style*="text-align:center"] {
+            width: 100% !important;
+            flex-shrink: 0 !important;
+        }
+
     </style>
 </head>
 <body>
