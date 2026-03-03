@@ -754,24 +754,6 @@
             from { transform: scale(1); opacity: 1; }
             to   { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
         }
-    
-        @media (max-width: 740px) {
-            body { padding: 0 !important; }
-            .wrapper { padding: 0 !important; width: 100%; }
-            .container { border-radius: 0 !important; min-height: 100vh; padding: 30px 18px !important; max-width: 100% !important; }
-            .side-panel { display: none !important; }
-        }
-
-    
-        /* ── FOOTER FIX ── */
-        body {
-            flex-direction: column !important;
-        }
-        body > div[style*="text-align:center"] {
-            width: 100% !important;
-            flex-shrink: 0 !important;
-        }
-
     </style>
 </head>
 <body>
