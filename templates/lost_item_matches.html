@@ -1,0 +1,235 @@
+{% extends "base_sidebar.html" %}
+{% block title %}AI Match Results — Campus Lost & Found{% endblock %}
+
+{% block extra_css %}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: #f1f5f9; min-height: 100vh; }
+
+.page-header { margin-bottom: 28px; }
+.page-header h1 { font-family: 'Syne', sans-serif; font-size: 26px; color: #0f172a; }
+.page-header p { color: #64748b; margin-top: 6px; font-size: 14px; }
+
+/* ── Lost item summary card ── */
+.lost-summary {
+    background: linear-gradient(135deg, #fff7ed, #fef3c7);
+    border: 1.5px solid #fde68a;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 820px;
+}
+.lost-summary-icon { font-size: 36px; flex-shrink: 0; }
+.lost-summary h3 { font-family: 'Syne', sans-serif; font-size: 17px; color: #92400e; font-weight: 800; }
+.lost-summary p  { font-size: 13px; color: #78350f; margin-top: 3px; }
+
+/* ── Section heading ── */
+.section-heading {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px;
+}
+.section-heading h2 { font-family: 'Syne', sans-serif; font-size: 19px; color: #0f172a; font-weight: 800; }
+.ai-badge {
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    color: white; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em;
+}
+
+/* ── Match cards grid ── */
+.matches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+    max-width: 820px;
+    margin-bottom: 32px;
+}
+
+.match-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    overflow: hidden;
+    border: 1.5px solid #e5e7eb;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+.match-card:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(0,0,0,0.12); }
+
+.match-score-badge {
+    position: absolute; top: 12px; right: 12px;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    color: white; font-size: 12px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.4);
+}
+.match-score-badge.high   { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.match-score-badge.medium { background: linear-gradient(135deg, #f97316, #fbbf24); }
+
+.match-img-wrap { height: 150px; background: #f1f5f9; overflow: hidden; }
+.match-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.match-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #cbd5e1; }
+
+.match-body { padding: 16px; }
+.match-category { font-size: 11px; font-weight: 600; color: #6366f1; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+.match-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+.match-desc { font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 10px; }
+.match-location { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+.match-finder  { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 5px; margin-bottom: 12px; }
+
+.ai-reason {
+    background: #f0f9ff; border: 1px solid #bae6fd;
+    border-radius: 8px; padding: 8px 10px;
+    font-size: 12px; color: #0369a1;
+    margin-bottom: 14px; line-height: 1.4;
+}
+.ai-reason span { font-weight: 700; }
+
+.btn-claim {
+    display: block; width: 100%; text-align: center;
+    padding: 10px; border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    color: white; font-weight: 700; font-size: 13px;
+    text-decoration: none; transition: opacity 0.2s;
+}
+.btn-claim:hover { opacity: 0.9; color: white; }
+
+/* ── No matches ── */
+.no-match-box {
+    background: white; border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    padding: 40px 32px; text-align: center;
+    max-width: 500px; margin-bottom: 28px;
+    border: 1.5px dashed #e5e7eb;
+}
+.no-match-box .icon { font-size: 48px; margin-bottom: 14px; }
+.no-match-box h3 { font-family: 'Syne', sans-serif; font-size: 18px; color: #0f172a; margin-bottom: 8px; }
+.no-match-box p  { font-size: 14px; color: #64748b; line-height: 1.6; }
+
+/* ── Action row ── */
+.action-row {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    max-width: 820px; margin-top: 8px;
+}
+.btn-primary {
+    padding: 12px 24px; border-radius: 10px;
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+    color: white; font-weight: 700; font-size: 14px;
+    text-decoration: none; transition: transform 0.2s;
+}
+.btn-primary:hover { transform: translateY(-2px); color: white; }
+.btn-secondary {
+    padding: 12px 24px; border-radius: 10px;
+    border: 1.5px solid #e5e7eb; background: white;
+    color: #64748b; font-weight: 600; font-size: 14px;
+    text-decoration: none; transition: background 0.2s;
+}
+.btn-secondary:hover { background: #f1f5f9; }
+
+.flash { padding: 14px 18px; border-radius: 12px; margin-bottom: 24px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; max-width: 820px; }
+.flash.success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+
+@media (max-width: 640px) {
+    .matches-grid { grid-template-columns: 1fr; }
+    .lost-summary { flex-direction: column; text-align: center; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🤖 AI Match Results</h1>
+    <p>We scanned all found items on campus for your lost item.</p>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="flash {{ category }}">✅ {{ message }}</div>
+    {% endfor %}
+{% endwith %}
+
+{% if lost %}
+<div class="lost-summary">
+    <div class="lost-summary-icon">📦</div>
+    <div>
+        <h3>Your Lost Item: {{ lost.item_name }}</h3>
+        <p>{{ lost.category }} &nbsp;·&nbsp; Lost on {{ lost.date_lost }} &nbsp;·&nbsp; {{ lost.description[:100] }}{% if lost.description|length > 100 %}...{% endif %}</p>
+    </div>
+</div>
+{% endif %}
+
+{% if error_msg %}
+<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;margin-bottom:24px;color:#dc2626;font-size:14px;max-width:820px;">
+    ⚠️ {{ error_msg }}
+</div>
+{% endif %}
+
+{% if matches %}
+<div class="section-heading">
+    <h2>🎯 {{ matches|length }} Possible Match{{ 'es' if matches|length > 1 else '' }} Found</h2>
+    <span class="ai-badge">✨ AI Powered</span>
+</div>
+
+<div class="matches-grid">
+    {% for m in matches %}
+    <div class="match-card">
+        {% if m.score >= 70 %}
+            <div class="match-score-badge high">{{ m.score }}% match</div>
+        {% elif m.score >= 50 %}
+            <div class="match-score-badge medium">{{ m.score }}% match</div>
+        {% else %}
+            <div class="match-score-badge">{{ m.score }}% match</div>
+        {% endif %}
+
+        <div class="match-img-wrap">
+            {% if m.image %}
+                <img src="{{ m.image }}" alt="{{ m.item_name }}" onerror="this.parentElement.innerHTML='<div class=match-img-placeholder>📦</div>'">
+            {% else %}
+                <div class="match-img-placeholder">📦</div>
+            {% endif %}
+        </div>
+
+        <div class="match-body">
+            <div class="match-category">{{ m.category }}</div>
+            <div class="match-name">{{ m.item_name }}</div>
+            <div class="match-desc">{{ m.description }}</div>
+
+            {% if m.location_found %}
+            <div class="match-location">📍 {{ m.location_found }}</div>
+            {% endif %}
+            <div class="match-finder">👤 Found by {{ m.finder_name }}</div>
+
+            <div class="ai-reason"><span>🤖 Why matched:</span> {{ m.reason }}</div>
+
+            <a href="{{ url_for('found_item_detail', item_id=m.id, user_id=user.id) }}" class="btn-claim">
+                View & Claim This Item →
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="no-match-box">
+    <div class="icon">🔍</div>
+    <h3>No matches found yet</h3>
+    <p>Don't worry! We've saved your report. <strong>You'll get an instant email notification</strong> the moment someone reports a found item that matches yours. 📧</p>
+</div>
+{% endif %}
+
+<div class="action-row">
+    <a href="{{ url_for('found_items_list', user_id=user.id) }}" class="btn-primary">🔎 Browse All Found Items</a>
+    <a href="{{ url_for('report_lost', user_id=user.id) }}" class="btn-secondary">+ Report Another Lost Item</a>
+    <a href="{{ url_for('dashboard_user', user_id=user.id) }}" class="btn-secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+// Auto-scroll to matches if they exist
+var matches = document.querySelectorAll('.match-card');
+if (matches.length > 0) {
+    setTimeout(function() {
+        document.querySelector('.section-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 400);
+}
+{% endblock %}
