@@ -439,6 +439,7 @@ Only include items with score >= 35."""
         error_msg=error_msg, current_user=g.current_user)
 
 
+@app.route("/lost_items/<int:user_id>")
 def lost_items_list(user_id):
     user = get_user(user_id)
     if not user:
