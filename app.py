@@ -864,33 +864,96 @@ def get_groq_client():
     return GroqClient(api_key=GROQ_API_KEY)
 
 # ── 1. AI CHATBOT ──────────────────────────────────────────
+def get_db_context_for_chat():
+    """Pull live summary + recent items from DB to give Groq real data."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Stats
+        cursor.execute("SELECT COUNT(*) AS n FROM lost_items WHERE status='Searching'")
+        active_lost = cursor.fetchone()['n']
+        cursor.execute("SELECT COUNT(*) AS n FROM found_items WHERE status='Available'")
+        available_found = cursor.fetchone()['n']
+        cursor.execute("SELECT COUNT(*) AS n FROM users WHERE role != 'Admin'")
+        total_users = cursor.fetchone()['n']
+
+        # Recent lost items (last 10)
+        cursor.execute("""
+            SELECT item_name, category, description, date_lost, status
+            FROM lost_items ORDER BY created_at DESC LIMIT 10
+        """)
+        lost_items = cursor.fetchall()
+
+        # Recent found items (last 10, available only)
+        cursor.execute("""
+            SELECT item_name, category, description, location_found, date_found
+            FROM found_items WHERE status='Available' ORDER BY created_at DESC LIMIT 10
+        """)
+        found_items = cursor.fetchall()
+
+        cursor.close(); conn.close()
+
+        lost_lines = "\n".join([
+            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (lost {i['date_lost']}, status: {i['status']})"
+            for i in lost_items
+        ]) or "  None currently."
+
+        found_lines = "\n".join([
+            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (found at {i.get('location_found','?')} on {i['date_found']})"
+            for i in found_items
+        ]) or "  None currently available."
+
+        return (
+            f"\n\n--- LIVE CAMPUS DATABASE (as of now) ---\n"
+            f"📊 Stats: {active_lost} items being searched | {available_found} found items available | {total_users} registered students\n\n"
+            f"🔍 Recent Lost Items (searching):\n{lost_lines}\n\n"
+            f"✅ Recent Found Items (available to claim):\n{found_lines}\n"
+            f"--- END OF DATABASE ---\n"
+        )
+    except Exception as e:
+        print(f"DB context error (non-fatal): {e}", flush=True)
+        return ""
+
 @app.route("/api/chat", methods=["POST"])
 def ai_chat():
-    """Floating chatbot assistant for campus lost & found."""
+    """Floating chatbot assistant with live DB knowledge."""
     try:
         data = request.get_json()
         user_msg = data.get("message", "").strip()
-        history  = data.get("history", [])   # [{role, content}, ...]
+        history  = data.get("history", [])
         if not user_msg:
             return jsonify({"reply": "Please type something!"}), 400
 
+        # Fetch live DB context
+        db_context = get_db_context_for_chat()
+
+        system_prompt = (
+            "You are CampusBot, a friendly AI assistant for the Campus Lost & Found web app "
+            "at MITS College. You have access to the live database of lost and found items on campus.\n\n"
+            "You can answer questions like:\n"
+            "- 'Is there a blue bag found on campus?' → search the found items list\n"
+            "- 'How many items are lost?' → use the stats\n"
+            "- 'Someone found keys near the library?' → search found items\n"
+            "- 'I lost my laptop, has anyone found it?' → search found items for matches\n\n"
+            "Always use the database info provided to give accurate, specific answers. "
+            "If an item matches what the user is describing, mention it by name and category. "
+            "Be short, friendly and helpful. Use emojis occasionally. "
+            "If asked something completely unrelated to campus/lost&found, politely redirect.\n"
+            "App URL: https://campus-lost-found-app.onrender.com"
+            + db_context
+        )
+
         client = get_groq_client()
         messages = [
-            {"role": "system", "content": (
-                "You are CampusBot, a friendly AI assistant for the Campus Lost & Found web app "
-                "at MITS College. Help students with: reporting lost/found items, how to claim items, "
-                "searching tips, and general campus lost & found questions. "
-                "Be short, friendly and helpful. Use emojis occasionally. "
-                "If asked something unrelated to campus/lost&found, politely redirect. "
-                "App URL: https://campus-lost-found-app.onrender.com"
-            )}
+            {"role": "system", "content": system_prompt}
         ] + history[-6:] + [{"role": "user", "content": user_msg}]
 
         resp = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,
-            max_tokens=300,
-            temperature=0.7
+            max_tokens=350,
+            temperature=0.5
         )
         reply = resp.choices[0].message.content.strip()
         return jsonify({"reply": reply})
