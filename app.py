@@ -374,8 +374,7 @@ def lost_item_matches(item_id, user_id):
     error_msg = None
 
     if lost:
-        # ✅ FIX: don't filter by status so we catch all found items
-        # (some may have been entered without setting status properly)
+        # Fetch all found items (no status filter)
         cursor.execute("""
             SELECT fi.id, fi.item_name, fi.description, fi.category,
                    fi.location_found, fi.date_found, fi.image,
@@ -384,38 +383,56 @@ def lost_item_matches(item_id, user_id):
             ORDER BY fi.created_at DESC LIMIT 50
         """)
         found_items = cursor.fetchall()
-        print(f"[Match Debug] Lost item: '{lost['item_name']}' | Found items in DB: {len(found_items)}", flush=True)
+        print(f"[Match Debug] Lost='{lost['item_name']}' cat='{lost['category']}' | Found items in DB: {len(found_items)}", flush=True)
 
         if found_items:
+            # ── STEP 1: Direct DB match — same category (guaranteed, no AI needed) ──
+            direct_matches = []
+            for i in found_items:
+                if i['category'] == lost['category']:
+                    direct_matches.append({
+                        "id": i["id"],
+                        "item_name": i["item_name"],
+                        "category": i["category"],
+                        "description": i["description"][:100],
+                        "location_found": i.get("location_found", ""),
+                        "finder_name": i["finder_name"],
+                        "image": i.get("image", ""),
+                        "score": 80,
+                        "reason": f"Same category: {i['category']}",
+                        "status": i.get("status", ""),
+                    })
+
+            print(f"[Match Debug] Direct category matches: {len(direct_matches)}", flush=True)
+
+            # ── STEP 2: Try Groq AI for smarter scoring on top of direct matches ──
             try:
                 import re, json
-
                 found_list = "\n".join([
-                    f"ID:{i['id']} | {i['item_name']} | {i['category']} | {i['description'][:80]} | Found at: {i.get('location_found','?')} | Status: {i.get('status','?')}"
+                    f"ID:{i['id']} | {i['item_name']} | {i['category']} | {i['description'][:80]} | Found at: {i.get('location_found','?')}"
                     for i in found_items
                 ])
 
-                # ✅ FIX: improved prompt — be generous with matching, explain bag = Bag & Luggage
-                prompt = f"""You are a campus lost & found matching AI. Be GENEROUS with matching — if items could possibly be the same, include them.
+                prompt = f"""You are a campus lost & found matching AI. Be VERY GENEROUS — if items could possibly be the same, include them.
 
-Lost Item reported by student:
+Lost Item:
 - Name: "{lost['item_name']}"
 - Category: {lost['category']}
 - Description: {lost['description'][:150]}
 
-Found Items currently in the system:
+Found Items:
 {found_list}
 
-IMPORTANT RULES:
-- "bag", "backpack", "handbag", "sling bag" all match category "Bag & Luggage"
-- "phone", "mobile", "laptop", "charger" match "Electronics"  
-- Match by meaning, not just exact words
-- Include a match if score >= 25 (be generous)
-- If the item name or category sounds similar, include it
+Rules:
+- Same category = at least 70% score
+- Similar name or description = higher score
+- Score threshold: >= 20 (very generous)
+- "bag", "backpack", "sling bag" all match "Bag & Luggage"
+- "phone", "mobile" match "Electronics"
 
-Return ONLY a JSON array, no explanation:
-[{{"id": 5, "score": 85, "reason": "Both are bags, descriptions are similar"}}]
-If truly no matches at all, return []"""
+Return ONLY a JSON array:
+[{{"id": 22, "score": 95, "reason": "Same category Bag & Luggage, similar item"}}]
+If truly zero matches, return []"""
 
                 client = get_groq_client()
                 resp = client.chat.completions.create(
@@ -425,16 +442,18 @@ If truly no matches at all, return []"""
                     temperature=0.1
                 )
                 raw = resp.choices[0].message.content.strip()
-                print(f"[Match Debug] Groq raw response: {raw}", flush=True)
+                print(f"[Match Debug] Groq raw: {raw}", flush=True)
 
                 json_match = re.search(r'\[.*?\]', raw, re.DOTALL)
                 if json_match:
                     match_list = json.loads(json_match.group())
-                    print(f"[Match Debug] Matches from Groq: {match_list}", flush=True)
+                    print(f"[Match Debug] Groq matches: {match_list}", flush=True)
                     found_map = {i["id"]: i for i in found_items}
+                    ai_ids = set()
                     for m in match_list:
                         fid = m.get("id")
                         if fid and fid in found_map:
+                            ai_ids.add(fid)
                             item = found_map[fid]
                             matches.append({
                                 "id": fid,
@@ -448,17 +467,23 @@ If truly no matches at all, return []"""
                                 "reason": m.get("reason", "Similar item"),
                                 "status": item.get("status", ""),
                             })
+                    # Add any direct matches Groq missed
+                    for dm in direct_matches:
+                        if dm["id"] not in ai_ids:
+                            matches.append(dm)
                 else:
-                    print(f"[Match Debug] No JSON array found in Groq response", flush=True)
-                    error_msg = "AI returned an unexpected response. Please browse found items manually."
+                    # Groq returned no JSON — fall back to direct matches
+                    matches = direct_matches
 
             except Exception as e:
-                print(f"[Match Error] {e}", flush=True)
-                error_msg = f"AI matching error: {str(e)}"
-        else:
-            print(f"[Match Debug] No found items in DB at all", flush=True)
+                print(f"[Match Error] Groq failed: {e} — using direct matches", flush=True)
+                matches = direct_matches  # Always show direct matches even if Groq fails
 
     cursor.close(); conn.close()
+
+    # Sort by score descending
+    matches.sort(key=lambda x: x["score"], reverse=True)
+
     return render_template("lost_item_matches.html",
         user=user, lost=lost, matches=matches,
         error_msg=error_msg, current_user=g.current_user)
