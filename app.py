@@ -24,7 +24,7 @@ def upload_to_cloudinary(file, folder):
         return None
 
 app = Flask(__name__)
-app.secret_key = "campus_secret_key_2024"
+app.secret_key = os.environ.get("SECRET_KEY", "campus_secret_key_2024")
 
 # ── Global Notification Toggle (Admin controlled) ──
 NOTIFICATIONS_ENABLED = True
@@ -859,6 +859,8 @@ from flask import jsonify
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 def get_groq_client():
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY environment variable is not set.")
     return GroqClient(api_key=GROQ_API_KEY)
 
 # ── 1. AI CHATBOT ──────────────────────────────────────────
@@ -893,7 +895,7 @@ def ai_chat():
         reply = resp.choices[0].message.content.strip()
         return jsonify({"reply": reply})
     except Exception as e:
-        print(f"Groq chat error: {e}")
+        print(f"Groq chat error: {e}", flush=True)
         return jsonify({"reply": "Sorry, AI is unavailable right now. Please try again later!"}), 500
 
 
@@ -983,7 +985,7 @@ Only include matches with score >= 40."""
         return jsonify({"matches": enriched, "lost_item": lost["item_name"]})
 
     except Exception as e:
-        print(f"Groq match error: {e}")
+        print(f"Groq match error: {e}", flush=True)
         return jsonify({"matches": [], "error": str(e)}), 500
 
 
