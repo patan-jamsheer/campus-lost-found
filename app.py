@@ -334,6 +334,7 @@ def submit_report_lost():
         INSERT INTO lost_items (user_id, item_name, description, category, date_lost, image, status)
         VALUES (%s,%s,%s,%s,%s,%s,%s)
     """, (user_id, item_name, description, category, date_lost, image_filename, status))
+    new_id = cursor.lastrowid  # ✅ grab ID before closing cursor
     cursor.close(); conn.close()
 
     # 🔔 Send email notification to ALL users
@@ -353,13 +354,6 @@ def submit_report_lost():
             ),
             recipient_list=all_emails
         )
-
-    # Get the new lost item's ID to redirect to AI match page
-    conn2 = get_db_connection()
-    cur2  = conn2.cursor()
-    cur2.execute("SELECT LAST_INSERT_ID() AS new_id")
-    new_id = cur2.fetchone()[0]
-    cur2.close(); conn2.close()
 
     flash(f"'{item_name}' reported! Checking for similar found items on campus... 🔍", "success")
     return redirect(url_for("lost_item_matches", item_id=new_id, user_id=user_id))
