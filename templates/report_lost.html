@@ -115,11 +115,11 @@
             <div class="form-row">
                 <div class="field">
                     <label>Item Name *</label>
-                    <input type="text" name="item_name" placeholder="e.g. Blue Dell Laptop" required>
+                    <input type="text" id="item_name" name="item_name" placeholder="e.g. Blue Dell Laptop" required>
                 </div>
                 <div class="field">
                     <label>Category *</label>
-                    <select name="category" required>
+                    <select id="category" name="category" required>
                         <option value="">Select category</option>
                         <option>Electronics</option>
                         <option>Books &amp; Stationery</option>
@@ -137,7 +137,7 @@
 
             <div class="field">
                 <label>Description *</label>
-                <textarea name="description" placeholder="Describe the item — colour, brand, any identifying marks, where you last saw it..." required></textarea>
+                <textarea id="description" name="description" placeholder="Describe the item — colour, brand, any identifying marks, where you last saw it..." required></textarea>
 
 <div style="margin-top:6px;">
     <button type="button" id="ai-desc-btn" onclick="aiGenerateDesc('lost')"
@@ -197,5 +197,67 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+function aiGenerateDesc(itemType) {
+    var itemName = document.getElementById('item_name').value.trim();
+    var category = document.getElementById('category').value.trim();
+    var descArea = document.getElementById('description');
+    var btn = document.getElementById('ai-desc-btn');
 
+    if (!itemName) {
+        alert('Please enter the item name first!');
+        document.getElementById('item_name').focus();
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Generating...';
+
+    fetch('/api/generate_description', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            item_name: itemName,
+            category: category,
+            keywords: descArea.value.trim(),
+            type: itemType
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.description) {
+            descArea.value = data.description;
+            descArea.style.borderColor = '#6366f1';
+            descArea.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.15)';
+            setTimeout(() => {
+                descArea.style.borderColor = '';
+                descArea.style.boxShadow = '';
+            }, 2000);
+        } else {
+            alert('AI could not generate a description. Please try again.');
+        }
+    })
+    .catch(() => alert('Connection error. Please try again.'))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '✨ AI Generate Description';
+    });
+}
+
+// Image preview
+document.getElementById('img-input').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (file) {
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            document.getElementById('preview-img').src = ev.target.result;
+            document.getElementById('preview-wrap').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Set today's date as max for date_lost
+document.getElementById('date_lost').max = new Date().toISOString().split('T')[0];
+</script>
 {% endblock %}
