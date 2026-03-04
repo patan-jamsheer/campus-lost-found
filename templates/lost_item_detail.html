@@ -218,7 +218,7 @@
                     <div class="reporter-hero">
                         <div class="reporter-avatar-wrap">
                             <div class="online-ring"></div>
-                            <img class="reporter-avatar-big" src="{{ url_for('static', filename='uploads/' + (reporter.profile_pic or 'default.jpeg')) }}" alt="{{ reporter.name }}">
+                            <img class="reporter-avatar-big" src="{{ reporter.profile_pic if reporter.profile_pic and (reporter.profile_pic.startswith('http://') or reporter.profile_pic.startswith('https://')) else url_for('static', filename='uploads/' + (reporter.profile_pic or 'default.jpeg')) }}" alt="{{ reporter.name }}">
                         </div>
                     </div>
                     <div class="reporter-body">

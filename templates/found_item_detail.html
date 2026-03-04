@@ -179,7 +179,7 @@
         <div class="contact-card">
             <div class="contact-header">
                 <div class="contact-avatar-outer">
-                    <img class="contact-avatar" src="{{ url_for('static', filename='uploads/' + item.profile_pic) }}" alt="{{ item.reporter_name }}">
+                    <img class="contact-avatar" src="{{ item.profile_pic if item.profile_pic and (item.profile_pic.startswith('http://') or item.profile_pic.startswith('https://')) else url_for('static', filename='uploads/' + (item.profile_pic or 'default.jpeg')) }}" alt="{{ item.reporter_name }}">
                 </div>
             </div>
             <div class="contact-body">

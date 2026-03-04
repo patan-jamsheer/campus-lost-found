@@ -102,7 +102,7 @@
                         <td style="color:#94a3b8;">{{ u.id }}</td>
                         <td>
                             <div class="user-cell">
-                                <img class="user-avatar" src="{{ url_for('static', filename='uploads/' + u.profile_pic) }}" alt="{{ u.name }}">
+                                <img class="user-avatar" src="{{ u.profile_pic if u.profile_pic and (u.profile_pic.startswith('http://') or u.profile_pic.startswith('https://')) else url_for('static', filename='uploads/' + (u.profile_pic or 'default.jpeg')) }}" alt="{{ u.name }}">
                                 <div>
                                     <div class="user-name">{{ u.name }}</div>
                                     <div class="user-email">{{ u.email }}</div>

@@ -139,7 +139,7 @@
                     <div class="card-title">{{ item.item_name }}</div>
                     <div class="card-desc">{{ item.description }}</div>
                     <div class="reporter-row">
-                        <img class="reporter-avatar" src="{{ url_for('static', filename='uploads/' + (item.profile_pic or 'default.jpeg')) }}" alt="{{ item.reporter_name }}">
+                        <img class="reporter-avatar" src="{{ item.profile_pic if item.profile_pic and (item.profile_pic.startswith('http://') or item.profile_pic.startswith('https://')) else url_for('static', filename='uploads/' + (item.profile_pic or 'default.jpeg')) }}" alt="{{ item.reporter_name }}">
                         <div class="reporter-info">
                             <div class="reporter-name">{{ item.reporter_name }}</div>
                             <div class="reporter-date">Lost on {{ item.date_lost.strftime('%d %b %Y') }}</div>

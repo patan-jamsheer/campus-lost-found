@@ -155,7 +155,7 @@
                     </div>
                     <div class="card-footer">
                         <div class="reporter">
-                            <img src="{{ url_for('static', filename='uploads/' + item.profile_pic) }}" alt="">
+                            <img src="{{ item.profile_pic if item.profile_pic and (item.profile_pic.startswith('http://') or item.profile_pic.startswith('https://')) else url_for('static', filename='uploads/' + (item.profile_pic or 'default.jpeg')) }}" alt="">
                             <div>
                                 <div class="reporter-name">{{ item.reporter_name }}</div>
                                 <div class="reporter-date">{{ item.created_at.strftime('%d %b') }}</div>
