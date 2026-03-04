@@ -1,10 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, g, jsonify
 from functools import wraps
 import mysql.connector
 import os
 import threading
+import re
+import json
+import random as _random
+import string as _string
 from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message
+from groq import Groq as GroqClient
 import cloudinary
 import cloudinary.uploader
 
@@ -32,7 +37,7 @@ NOTIFICATIONS_ENABLED = True
 # ── Email Config ─────────────────────────────────────────────
 # ⚠️  CHANGE THESE 2 LINES with your Gmail and App Password
 app.config['MAIL_SERVER']         = os.environ.get('MAIL_SERVER', 'smtp-relay.brevo.com')
-app.config['MAIL_PORT']           = int(os.environ.get('MAIL_PORT', 465))
+app.config['MAIL_PORT']           = int(os.environ.get('MAIL_PORT') or 465)
 app.config['MAIL_USE_TLS']        = False
 app.config['MAIL_USE_SSL']         = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
@@ -40,8 +45,6 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')  # ← PUT YOUR AP
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME')
 
 mail = Mail(app)
-
-from flask import g
 
 @app.before_request
 def load_current_user():
@@ -56,7 +59,10 @@ LOST_ITEM_UPLOAD_FOLDER  = "static/uploads/lost_items"
 FOUND_ITEM_UPLOAD_FOLDER = "static/uploads/found_items"
 
 for _folder in [UPLOAD_FOLDER, LOST_ITEM_UPLOAD_FOLDER, FOUND_ITEM_UPLOAD_FOLDER]:
-    os.makedirs(_folder, exist_ok=True)
+    try:
+        os.makedirs(_folder, exist_ok=True)
+    except Exception:
+        pass
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
@@ -407,7 +413,6 @@ def lost_item_matches(item_id, user_id):
 
             # ── STEP 2: Try Groq AI for smarter scoring on top of direct matches ──
             try:
-                import re, json
                 found_list = "\n".join([
                     f"ID:{i['id']} | {i['item_name']} | {i['category']} | {i['description'][:80]} | Found at: {i.get('location_found','?')}"
                     for i in found_items
@@ -929,9 +934,6 @@ def delete_found_item(item_id, user_id):
 
 
 
-import random as _random
-import string as _string
-
 @app.route("/forgot_password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "GET":
@@ -971,7 +973,6 @@ def settings(user_id):
 
 @app.route("/api/stats/<int:user_id>")
 def api_stats(user_id):
-    from flask import jsonify
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT COUNT(*) AS n FROM lost_items")
@@ -1025,7 +1026,7 @@ def auto_notify_lost_item_owners(found_name, found_desc, found_category, found_l
             for i in lost_items
         ])
 
-        import re, json
+
         prompt = f"""You are a lost & found matching AI.
 A new found item was just reported:
 Item: "{found_name}" | Category: {found_category} | Description: {found_desc[:120]} | Found at: {found_location}
@@ -1090,8 +1091,6 @@ If no matches, return []. Maximum 5 matches."""
 # ════════════════════════════════════════════════════════════
 # 🤖 GROQ AI FEATURES
 # ════════════════════════════════════════════════════════════
-from groq import Groq as GroqClient
-from flask import jsonify
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
@@ -1255,7 +1254,7 @@ Only include matches with score >= 40."""
         raw = resp.choices[0].message.content.strip()
 
         # Parse JSON from response
-        import re, json
+
         json_match = re.search(r'\[.*?\]', raw, re.DOTALL)
         if not json_match:
             return jsonify({"matches": []})
