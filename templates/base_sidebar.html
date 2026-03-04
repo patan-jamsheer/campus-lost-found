@@ -26,10 +26,13 @@
         nav { flex: 1; padding: 6px 12px; overflow-y: auto; }
         nav::-webkit-scrollbar { width: 0; }
         .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--muted); padding: 14px 10px 6px; text-transform: uppercase; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s, color 0.2s; position: relative; }
-        .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
-        .nav-item.active { background: rgba(56,189,248,0.1); color: var(--accent); }
-        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 20%; height: 60%; width: 3px; border-radius: 2px; background: var(--accent); }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.2s, color 0.2s, transform 0.15s, box-shadow 0.2s; position: relative; }
+        .nav-item:hover { background: rgba(56,189,248,0.08); color: #e2e8f0; transform: translateX(4px); box-shadow: 0 2px 12px rgba(56,189,248,0.08); }
+        .nav-item:hover .nav-icon { transform: scale(1.2); }
+        .nav-icon { transition: transform 0.2s; display: inline-block; }
+        .nav-item.active { background: rgba(56,189,248,0.15); color: var(--accent); font-weight: 700; box-shadow: 0 2px 16px rgba(56,189,248,0.12); }
+        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 15%; height: 70%; width: 3px; border-radius: 2px; background: linear-gradient(180deg, var(--accent), var(--accent2)); box-shadow: 0 0 8px var(--accent); }
+        .nav-item.active .nav-icon { transform: scale(1.15); }
         .nav-icon { font-size: 16px; width: 20px; text-align: center; }
         .edit-cta { margin: 14px 16px 20px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: linear-gradient(135deg, #5c6ef8, #a78bfa); border-radius: 12px; color: white; font-weight: 600; font-size: 13px; text-decoration: none; transition: transform 0.2s; }
         .edit-cta:hover { transform: translateY(-2px); color: white; }
