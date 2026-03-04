@@ -10,9 +10,9 @@ import cloudinary.uploader
 
 # Cloudinary config
 cloudinary.config(
-    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "dw6keiyo1"),
-    api_key = os.environ.get("CLOUDINARY_API_KEY", "423793747938516"),
-    api_secret = os.environ.get("CLOUDINARY_API_SECRET", "yFt90ChJKkFs8f1NBB4bLLmZI-g")
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key = os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET")
 )
 
 def upload_to_cloudinary(file, folder):
@@ -69,10 +69,10 @@ CATEGORIES = [
 # ── DB ──────────────────────────────────────────────────────
 def get_db_connection():
     return mysql.connector.connect(
-        host=os.environ.get("MYSQL_HOST", "sql12.freesqldatabase.com"),
-        user=os.environ.get("MYSQL_USER", "sql12818306"),
-        password=os.environ.get("MYSQL_PASSWORD", "HgCSNGey8Q"),
-        database=os.environ.get("MYSQL_DB", "sql12818306"),
+        host=os.environ.get("MYSQL_HOST"),
+        user=os.environ.get("MYSQL_USER"),
+        password=os.environ.get("MYSQL_PASSWORD"),
+        database=os.environ.get("MYSQL_DB"),
         autocommit=True
     )
 
@@ -990,7 +990,7 @@ Only include matches with score >= 40."""
 # ── 3. AI DESCRIPTION GENERATOR ───────────────────────────
 @app.route("/api/generate_description", methods=["POST"])
 def ai_generate_description():
-    """Generate a good item description from basic keywords."""
+    """Generate a good item description from basic keywords, enriched with DB context."""
     try:
         data = request.get_json()
         item_name = data.get("item_name", "").strip()
@@ -1001,10 +1001,35 @@ def ai_generate_description():
         if not item_name:
             return jsonify({"description": ""}), 400
 
+        # Pull similar existing items from DB for context
+        db_context = ""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            table = "lost_items" if item_type == "lost" else "found_items"
+            if category:
+                cursor.execute(
+                    f"SELECT description FROM {table} WHERE category = %s ORDER BY id DESC LIMIT 5",
+                    (category,)
+                )
+            else:
+                cursor.execute(
+                    f"SELECT description FROM {table} ORDER BY id DESC LIMIT 5"
+                )
+            rows = cursor.fetchall()
+            cursor.close(); conn.close()
+            if rows:
+                samples = [r["description"] for r in rows if r.get("description")][:3]
+                if samples:
+                    db_context = "\n\nFor reference, here are similar existing descriptions on this campus:\n" + \
+                                 "\n".join(f"- {s[:80]}" for s in samples)
+        except Exception as db_err:
+            print(f"DB context fetch error (non-fatal): {db_err}", flush=True)
+
         prompt = f"""Write a clear, helpful {item_type} item report description for a campus lost & found app.
 Item: {item_name}
 Category: {category}
-Keywords/details: {keywords}
+Keywords/details: {keywords}{db_context}
 
 Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and descriptive."""
 
@@ -1015,11 +1040,12 @@ Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and
             max_tokens=120,
             temperature=0.6
         )
-        desc = resp.choices[0].message.content.strip().strip('"\'\' ')
+        desc = resp.choices[0].message.content.strip().strip('"\'\'` ')
         return jsonify({"description": desc})
     except Exception as e:
-        print(f"Groq desc error: {e}")
+        print(f"Groq desc error: {e}", flush=True)
         return jsonify({"description": "", "error": str(e)}), 500
+
 
 
 # ════════════════════════════════════════════════════════════
