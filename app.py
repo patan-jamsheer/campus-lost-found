@@ -228,7 +228,7 @@ def dashboard_user(user_id):
         return redirect(url_for("home"))
     if user["role"] == "Admin":
         return redirect(url_for("admin_dashboard", admin_id=user_id))
-    return render_template("dashboard.html", user=user, current_user=g.current_user)
+    return render_template("dashboard.html", user=user, current_user=g.current_user, active_page="dashboard")
 
 # ════════════════════════════════════════════════════════════
 # PROFILE
@@ -241,14 +241,14 @@ def profile(user_id):
     # viewer = logged-in user (for back button going to correct dashboard)
     viewer_id = session.get("user_id", user_id)
     viewer = get_user(viewer_id) or user
-    return render_template("profile.html", user=user, current_user=viewer)
+    return render_template("profile.html", user=user, current_user=viewer, active_page="profile")
 
 @app.route("/edit_profile/<int:user_id>")
 def edit_profile(user_id):
     user = get_user(user_id)
     if not user:
         return "User not found", 404
-    return render_template("edit_profile.html", user=user, current_user=g.current_user)
+    return render_template("edit_profile.html", user=user, current_user=g.current_user, active_page="profile")
 
 @app.route("/update_profile/<int:user_id>", methods=["POST"])
 def update_profile(user_id):
@@ -308,7 +308,7 @@ def report_lost(user_id):
     user = get_user(user_id)
     if not user:
         return redirect(url_for("home"))
-    return render_template("report_lost.html", user=user, current_user=g.current_user)
+    return render_template("report_lost.html", user=user, current_user=g.current_user, active_page="report_lost")
 
 @app.route("/report_lost", methods=["POST"])
 def submit_report_lost():
@@ -489,7 +489,7 @@ If truly zero matches, return []"""
 
     return render_template("lost_item_matches.html",
         user=user, lost=lost, matches=matches,
-        error_msg=error_msg, current_user=g.current_user)
+        error_msg=error_msg, current_user=g.current_user, active_page="admin_dashboard")
 
 
 @app.route("/lost_items/<int:user_id>")
@@ -526,7 +526,8 @@ def lost_items_list(user_id):
     return render_template("lost_items_list.html",
         user=user, items=items, total=len(items), current_user=g.current_user,
         counts=counts, categories=CATEGORIES,
-        filters={"search": search, "category": category, "status": status}
+        filters={"search": search, "category": category, "status": status},
+        active_page="lost_items"
     )
 
 @app.route("/lost_item/<int:item_id>/<int:viewer_id>")
@@ -547,7 +548,7 @@ def lost_item_detail(item_id, viewer_id):
     cursor.close(); conn.close()
 
     return render_template("lost_item_detail.html",
-        viewer=viewer, user=viewer, item=item, reporter=reporter, current_user=g.current_user)
+        viewer=viewer, user=viewer, item=item, reporter=reporter, current_user=g.current_user, active_page="lost_items")
 
 # ════════════════════════════════════════════════════════════
 # FOUND ITEMS
@@ -557,7 +558,7 @@ def report_found(user_id):
     user = get_user(user_id)
     if not user:
         return redirect(url_for("home"))
-    return render_template("report_found.html", user=user, current_user=g.current_user)
+    return render_template("report_found.html", user=user, current_user=g.current_user, active_page="report_found")
 
 @app.route("/report_found", methods=["POST"])
 def submit_report_found():
@@ -651,7 +652,8 @@ def found_items_list(user_id):
         user=user, items=items, total=len(items), current_user=g.current_user,
         counts={"available": available, "claimed": claimed, "closed": closed},
         categories=CATEGORIES,
-        filters={"search": search, "category": category, "status": status}
+        filters={"search": search, "category": category, "status": status},
+        active_page="found_items"
     )
 
 @app.route("/found_item/<int:item_id>/<int:user_id>")
@@ -683,7 +685,7 @@ def found_item_detail(item_id, user_id):
         return "Item not found", 404
 
     return render_template("found_item_detail.html",
-        user=user, item=item, already_claimed=already_claimed, current_user=g.current_user)
+        user=user, item=item, already_claimed=already_claimed, current_user=g.current_user, active_page="found_items")
 
 # ════════════════════════════════════════════════════════════
 # CLAIMS
@@ -730,7 +732,7 @@ def my_claims(user_id):
     claims = cursor.fetchall()
     cursor.close(); conn.close()
 
-    return render_template("my_claims.html", user=user, claims=claims, current_user=g.current_user)
+    return render_template("my_claims.html", user=user, claims=claims, current_user=g.current_user, active_page="claims")
 
 # ════════════════════════════════════════════════════════════
 # ADMIN PANEL
@@ -859,7 +861,7 @@ def admin_users(admin_id):
     cursor.execute("SELECT * FROM users ORDER BY created_at DESC")
     users = cursor.fetchall()
     cursor.close(); conn.close()
-    return render_template("admin_users.html", admin=admin, users=users, current_user=g.current_user)
+    return render_template("admin_users.html", admin=admin, users=users, current_user=g.current_user, active_page="admin_users")
 
 # ════════════════════════════════════════════════════════════
 # OWNER / ADMIN DELETE — accessible from item detail pages
@@ -966,7 +968,7 @@ def settings(user_id):
     user = get_user(user_id)
     if not user:
         return redirect(url_for('home'))
-    return render_template("settings.html", user=user, current_user=g.current_user)
+    return render_template("settings.html", user=user, current_user=g.current_user, active_page="settings")
 
 
 @app.route("/api/stats/<int:user_id>")
