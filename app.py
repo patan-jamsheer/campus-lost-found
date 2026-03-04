@@ -348,10 +348,97 @@ def submit_report_lost():
             recipient_list=all_emails
         )
 
-    flash(f"'{item_name}' reported successfully! We'll notify you if someone finds it.", "success")
-    return redirect(url_for("report_lost", user_id=user_id))
+    # Get the new lost item's ID to redirect to AI match page
+    conn2 = get_db_connection()
+    cur2  = conn2.cursor()
+    cur2.execute("SELECT LAST_INSERT_ID() AS new_id")
+    new_id = cur2.fetchone()[0]
+    cur2.close(); conn2.close()
 
-@app.route("/lost_items/<int:user_id>")
+    flash(f"'{item_name}' reported! Checking for similar found items on campus... 🔍", "success")
+    return redirect(url_for("lost_item_matches", item_id=new_id, user_id=user_id))
+
+@app.route("/lost_item_matches/<int:item_id>/<int:user_id>")
+def lost_item_matches(item_id, user_id):
+    """Show AI-matched found items right after a lost item is submitted."""
+    user = get_user(user_id)
+    if not user:
+        return redirect(url_for("home"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM lost_items WHERE id = %s", (item_id,))
+    lost = cursor.fetchone()
+
+    matches = []
+    error_msg = None
+
+    if lost:
+        # Get available found items
+        cursor.execute("""
+            SELECT fi.id, fi.item_name, fi.description, fi.category,
+                   fi.location_found, fi.date_found, fi.image, u.name AS finder_name
+            FROM found_items fi JOIN users u ON fi.user_id = u.id
+            WHERE fi.status = 'Available'
+            ORDER BY fi.created_at DESC LIMIT 30
+        """)
+        found_items = cursor.fetchall()
+
+        if found_items:
+            try:
+                found_list = "\n".join([
+                    f"ID:{i['id']} | {i['item_name']} | {i['category']} | {i['description'][:80]} | Found at: {i.get('location_found','?')}"
+                    for i in found_items
+                ])
+                prompt = f"""You are a lost & found matching AI.
+Lost Item: "{lost['item_name']}" | Category: {lost['category']} | Description: {lost['description'][:120]}
+
+Found Items List:
+{found_list}
+
+Return ONLY a JSON array (no explanation) of the top 3 best matching found items:
+[{{"id": 5, "score": 92, "reason": "Same category and description matches"}}, ...]
+If no good matches exist, return [].
+Only include items with score >= 35."""
+
+                import re, json
+                client = get_groq_client()
+                resp = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=200,
+                    temperature=0.2
+                )
+                raw = resp.choices[0].message.content.strip()
+                json_match = re.search(r'\[.*?\]', raw, re.DOTALL)
+                if json_match:
+                    match_list = json.loads(json_match.group())
+                    found_map = {i["id"]: i for i in found_items}
+                    for m in match_list:
+                        fid = m.get("id")
+                        if fid and fid in found_map:
+                            item = found_map[fid]
+                            matches.append({
+                                "id": fid,
+                                "item_name": item["item_name"],
+                                "category": item["category"],
+                                "description": item["description"][:100],
+                                "location_found": item.get("location_found", ""),
+                                "finder_name": item["finder_name"],
+                                "image": item.get("image", ""),
+                                "score": m.get("score", 50),
+                                "reason": m.get("reason", "Similar item"),
+                            })
+            except Exception as e:
+                print(f"Match page error: {e}", flush=True)
+                error_msg = "AI matching temporarily unavailable."
+
+    cursor.close(); conn.close()
+    return render_template("lost_item_matches.html",
+        user=user, lost=lost, matches=matches,
+        error_msg=error_msg, current_user=g.current_user)
+
+
 def lost_items_list(user_id):
     user = get_user(user_id)
     if not user:
@@ -464,6 +551,13 @@ def submit_report_found():
         )
 
     flash(f"'{item_name}' reported as found successfully!", "success")
+
+    # 🤖 AUTO-MATCH: scan all active lost items and notify matching owners
+    threading.Thread(
+        target=auto_notify_lost_item_owners,
+        args=(item_name, description, category, location_found, date_found, int(user_id))
+    ).start()
+
     return redirect(url_for("report_found", user_id=user_id))
 
 @app.route("/found_items/<int:user_id>")
@@ -848,6 +942,98 @@ def toggle_notifications(admin_id):
     status = "enabled ✅" if NOTIFICATIONS_ENABLED else "disabled 🔕"
     flash(f"Email notifications {status} for all users.", "success")
     return redirect(url_for("admin_dashboard", admin_id=admin_id))
+
+
+def auto_notify_lost_item_owners(found_name, found_desc, found_category, found_location, found_date, finder_user_id):
+    """
+    When a found item is submitted, use Groq to match it against all active lost items.
+    Email the owners of matching lost items instantly.
+    Runs in a background thread — never blocks the request.
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get all active lost items with owner emails
+        cursor.execute("""
+            SELECT li.id, li.item_name, li.description, li.category, li.date_lost,
+                   u.name AS owner_name, u.email AS owner_email
+            FROM lost_items li JOIN users u ON li.user_id = u.id
+            WHERE li.status = 'Searching'
+            ORDER BY li.created_at DESC LIMIT 40
+        """)
+        lost_items = cursor.fetchall()
+        cursor.close(); conn.close()
+
+        if not lost_items:
+            return
+
+        # Build Groq prompt
+        lost_list = "\n".join([
+            f"ID:{i['id']} | {i['item_name']} | {i['category']} | {i['description'][:80]}"
+            for i in lost_items
+        ])
+
+        import re, json
+        prompt = f"""You are a lost & found matching AI.
+A new found item was just reported:
+Item: "{found_name}" | Category: {found_category} | Description: {found_desc[:120]} | Found at: {found_location}
+
+Active Lost Items (people still searching):
+{lost_list}
+
+Return ONLY a JSON array of lost items that likely match the found item (score >= 40):
+[{{"id": 3, "score": 88, "reason": "Same category, description matches closely"}}, ...]
+If no matches, return []. Maximum 5 matches."""
+
+        client = get_groq_client()
+        resp = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=250,
+            temperature=0.2
+        )
+        raw = resp.choices[0].message.content.strip()
+        json_match = re.search(r'\[.*?\]', raw, re.DOTALL)
+        if not json_match:
+            return
+
+        matches = json.loads(json_match.group())
+        if not matches:
+            return
+
+        # Map lost item IDs to their owners
+        lost_map = {i["id"]: i for i in lost_items}
+
+        for m in matches:
+            lost_id = m.get("id")
+            score   = m.get("score", 0)
+            reason  = m.get("reason", "Similar item found")
+            if not lost_id or lost_id not in lost_map:
+                continue
+
+            owner = lost_map[lost_id]
+            send_notification_email(
+                subject=f"🎉 Good news! A similar item to your '{owner['item_name']}' was just found!",
+                body=(
+                    f"Hi {owner['name']},\n\n"
+                    f"Great news! Our AI found a possible match for your lost item.\n\n"
+                    f"🔍 Your Lost Item   : {owner['item_name']} ({owner['category']})\n"
+                    f"✅ Found Item       : {found_name} ({found_category})\n"
+                    f"📍 Found At        : {found_location}\n"
+                    f"📅 Date Found      : {found_date}\n"
+                    f"🤖 AI Match Score  : {score}%\n"
+                    f"💡 Reason          : {reason}\n\n"
+                    f"Log in now to browse found items and submit a claim if it's yours!\n"
+                    f"👉 https://campus-lost-found-app.onrender.com\n\n"
+                    f"— Campus Lost & Found Team 🎓"
+                ),
+                recipient_list=[owner["owner_email"]]
+            )
+            print(f"✅ Auto-notified {owner['owner_email']} about match for lost item #{lost_id} (score {score}%)", flush=True)
+
+    except Exception as e:
+        print(f"❌ Auto-notify error: {e}", flush=True)
 
 
 # ════════════════════════════════════════════════════════════
