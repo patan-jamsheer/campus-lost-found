@@ -849,6 +849,179 @@ def toggle_notifications(admin_id):
     flash(f"Email notifications {status} for all users.", "success")
     return redirect(url_for("admin_dashboard", admin_id=admin_id))
 
+
+# ════════════════════════════════════════════════════════════
+# 🤖 GROQ AI FEATURES
+# ════════════════════════════════════════════════════════════
+from groq import Groq as GroqClient
+from flask import jsonify
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+
+def get_groq_client():
+    return GroqClient(api_key=GROQ_API_KEY)
+
+# ── 1. AI CHATBOT ──────────────────────────────────────────
+@app.route("/api/chat", methods=["POST"])
+def ai_chat():
+    """Floating chatbot assistant for campus lost & found."""
+    try:
+        data = request.get_json()
+        user_msg = data.get("message", "").strip()
+        history  = data.get("history", [])   # [{role, content}, ...]
+        if not user_msg:
+            return jsonify({"reply": "Please type something!"}), 400
+
+        client = get_groq_client()
+        messages = [
+            {"role": "system", "content": (
+                "You are CampusBot, a friendly AI assistant for the Campus Lost & Found web app "
+                "at MITS College. Help students with: reporting lost/found items, how to claim items, "
+                "searching tips, and general campus lost & found questions. "
+                "Be short, friendly and helpful. Use emojis occasionally. "
+                "If asked something unrelated to campus/lost&found, politely redirect. "
+                "App URL: https://campus-lost-found-app.onrender.com"
+            )}
+        ] + history[-6:] + [{"role": "user", "content": user_msg}]
+
+        resp = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=messages,
+            max_tokens=300,
+            temperature=0.7
+        )
+        reply = resp.choices[0].message.content.strip()
+        return jsonify({"reply": reply})
+    except Exception as e:
+        print(f"Groq chat error: {e}")
+        return jsonify({"reply": "Sorry, AI is unavailable right now. Please try again later!"}), 500
+
+
+# ── 2. SMART ITEM MATCHING ─────────────────────────────────
+@app.route("/api/match/<int:lost_item_id>/<int:user_id>")
+def ai_match_items(lost_item_id, user_id):
+    """Given a lost item, find top matching found items using Groq AI."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get the lost item
+        cursor.execute("SELECT * FROM lost_items WHERE id = %s", (lost_item_id,))
+        lost = cursor.fetchone()
+        if not lost:
+            cursor.close(); conn.close()
+            return jsonify({"matches": [], "error": "Lost item not found"}), 404
+
+        # Get available found items (max 30 for context window)
+        cursor.execute("""
+            SELECT fi.id, fi.item_name, fi.description, fi.category, fi.location_found,
+                   fi.date_found, fi.image, u.name AS finder_name
+            FROM found_items fi JOIN users u ON fi.user_id = u.id
+            WHERE fi.status = 'Available'
+            ORDER BY fi.created_at DESC LIMIT 30
+        """)
+        found_items = cursor.fetchall()
+        cursor.close(); conn.close()
+
+        if not found_items:
+            return jsonify({"matches": [], "message": "No found items available yet."})
+
+        # Build prompt for Groq
+        found_list = "\n".join([
+            f"ID:{item['id']} | {item['item_name']} | {item['category']} | {item['description'][:80]} | Found at: {item.get('location_found','?')}"
+            for item in found_items
+        ])
+
+        prompt = f"""You are a lost & found matching AI. 
+Lost Item: "{lost['item_name']}" | Category: {lost['category']} | Description: {lost['description'][:120]}
+
+Found Items List:
+{found_list}
+
+Return ONLY a JSON array (no explanation) of the top 3 best matching found items, like:
+[{{"id": 5, "score": 92, "reason": "Same category and description matches"}}, ...]
+If no good matches, return []
+Only include matches with score >= 40."""
+
+        client = get_groq_client()
+        resp = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.2
+        )
+        raw = resp.choices[0].message.content.strip()
+
+        # Parse JSON from response
+        import re, json
+        json_match = re.search(r'\[.*?\]', raw, re.DOTALL)
+        if not json_match:
+            return jsonify({"matches": []})
+
+        match_list = json.loads(json_match.group())
+
+        # Enrich with full item data
+        found_map = {item["id"]: item for item in found_items}
+        enriched = []
+        for m in match_list:
+            item_id = m.get("id")
+            if item_id and item_id in found_map:
+                item = found_map[item_id]
+                enriched.append({
+                    "id": item_id,
+                    "item_name": item["item_name"],
+                    "category": item["category"],
+                    "description": item["description"][:100],
+                    "location_found": item.get("location_found", ""),
+                    "finder_name": item["finder_name"],
+                    "image": item.get("image", ""),
+                    "score": m.get("score", 50),
+                    "reason": m.get("reason", "Similar item"),
+                    "detail_url": f"/found_item/{item_id}/{user_id}"
+                })
+
+        return jsonify({"matches": enriched, "lost_item": lost["item_name"]})
+
+    except Exception as e:
+        print(f"Groq match error: {e}")
+        return jsonify({"matches": [], "error": str(e)}), 500
+
+
+# ── 3. AI DESCRIPTION GENERATOR ───────────────────────────
+@app.route("/api/generate_description", methods=["POST"])
+def ai_generate_description():
+    """Generate a good item description from basic keywords."""
+    try:
+        data = request.get_json()
+        item_name = data.get("item_name", "").strip()
+        category  = data.get("category", "").strip()
+        keywords  = data.get("keywords", "").strip()
+        item_type = data.get("type", "lost")  # "lost" or "found"
+
+        if not item_name:
+            return jsonify({"description": ""}), 400
+
+        prompt = f"""Write a clear, helpful {item_type} item report description for a campus lost & found app.
+Item: {item_name}
+Category: {category}
+Keywords/details: {keywords}
+
+Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and descriptive."""
+
+        client = get_groq_client()
+        resp = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=120,
+            temperature=0.6
+        )
+        desc = resp.choices[0].message.content.strip().strip('"\'\' ')
+        return jsonify({"description": desc})
+    except Exception as e:
+        print(f"Groq desc error: {e}")
+        return jsonify({"description": "", "error": str(e)}), 500
+
+
 # ════════════════════════════════════════════════════════════
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
