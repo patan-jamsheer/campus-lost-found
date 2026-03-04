@@ -393,9 +393,13 @@ def lost_item_matches(item_id, user_id):
 
         if found_items:
             # ── STEP 1: Direct DB match — same category (guaranteed, no AI needed) ──
+            # Use strip() to handle any whitespace/encoding differences in DB values
+            lost_cat = (lost['category'] or '').strip().lower()
             direct_matches = []
             for i in found_items:
-                if i['category'] == lost['category']:
+                item_cat = (i['category'] or '').strip().lower()
+                print(f"[Cat Debug] lost_cat='{lost_cat}' vs found_cat='{item_cat}' match={item_cat == lost_cat}", flush=True)
+                if item_cat == lost_cat or lost_cat in item_cat or item_cat in lost_cat:
                     direct_matches.append({
                         "id": i["id"],
                         "item_name": i["item_name"],
@@ -1347,6 +1351,40 @@ Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and
         print(f"Groq desc error: {e}", flush=True)
         return jsonify({"description": "", "error": str(e)}), 500
 
+
+
+@app.route("/api/debug_match/<int:lost_id>")
+def debug_match(lost_id):
+    """Temporary debug route — shows raw DB category values for matching."""
+    from flask import jsonify
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id, item_name, category, status FROM lost_items WHERE id = %s", (lost_id,))
+    lost = cursor.fetchone()
+    cursor.execute("SELECT id, item_name, category, status FROM found_items ORDER BY id DESC LIMIT 20")
+    found = cursor.fetchall()
+    cursor.close(); conn.close()
+
+    result = {
+        "lost_item": {
+            "id": lost["id"] if lost else None,
+            "item_name": lost["item_name"] if lost else None,
+            "category": lost["category"] if lost else None,
+            "category_repr": repr(lost["category"]) if lost else None,
+        },
+        "found_items": [
+            {
+                "id": f["id"],
+                "item_name": f["item_name"],
+                "category": f["category"],
+                "category_repr": repr(f["category"]),
+                "status": f["status"],
+                "category_matches": (f["category"] or "").strip().lower() == (lost["category"] or "").strip().lower() if lost else False
+            }
+            for f in found
+        ]
+    }
+    return jsonify(result)
 
 
 # ════════════════════════════════════════════════════════════
