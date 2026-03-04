@@ -885,7 +885,7 @@ def ai_chat():
         ] + history[-6:] + [{"role": "user", "content": user_msg}]
 
         resp = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama-3.3-70b-versatile",
             messages=messages,
             max_tokens=300,
             temperature=0.7
@@ -945,7 +945,7 @@ Only include matches with score >= 40."""
 
         client = get_groq_client()
         resp = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200,
             temperature=0.2
@@ -1010,7 +1010,7 @@ Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and
 
         client = get_groq_client()
         resp = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=120,
             temperature=0.6
