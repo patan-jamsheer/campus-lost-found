@@ -374,45 +374,63 @@ def lost_item_matches(item_id, user_id):
     error_msg = None
 
     if lost:
-        # Get available found items
+        # ✅ FIX: don't filter by status so we catch all found items
+        # (some may have been entered without setting status properly)
         cursor.execute("""
             SELECT fi.id, fi.item_name, fi.description, fi.category,
-                   fi.location_found, fi.date_found, fi.image, u.name AS finder_name
+                   fi.location_found, fi.date_found, fi.image,
+                   fi.status, u.name AS finder_name
             FROM found_items fi JOIN users u ON fi.user_id = u.id
-            WHERE fi.status = 'Available'
-            ORDER BY fi.created_at DESC LIMIT 30
+            ORDER BY fi.created_at DESC LIMIT 50
         """)
         found_items = cursor.fetchall()
+        print(f"[Match Debug] Lost item: '{lost['item_name']}' | Found items in DB: {len(found_items)}", flush=True)
 
         if found_items:
             try:
+                import re, json
+
                 found_list = "\n".join([
-                    f"ID:{i['id']} | {i['item_name']} | {i['category']} | {i['description'][:80]} | Found at: {i.get('location_found','?')}"
+                    f"ID:{i['id']} | {i['item_name']} | {i['category']} | {i['description'][:80]} | Found at: {i.get('location_found','?')} | Status: {i.get('status','?')}"
                     for i in found_items
                 ])
-                prompt = f"""You are a lost & found matching AI.
-Lost Item: "{lost['item_name']}" | Category: {lost['category']} | Description: {lost['description'][:120]}
 
-Found Items List:
+                # ✅ FIX: improved prompt — be generous with matching, explain bag = Bag & Luggage
+                prompt = f"""You are a campus lost & found matching AI. Be GENEROUS with matching — if items could possibly be the same, include them.
+
+Lost Item reported by student:
+- Name: "{lost['item_name']}"
+- Category: {lost['category']}
+- Description: {lost['description'][:150]}
+
+Found Items currently in the system:
 {found_list}
 
-Return ONLY a JSON array (no explanation) of the top 3 best matching found items:
-[{{"id": 5, "score": 92, "reason": "Same category and description matches"}}, ...]
-If no good matches exist, return [].
-Only include items with score >= 35."""
+IMPORTANT RULES:
+- "bag", "backpack", "handbag", "sling bag" all match category "Bag & Luggage"
+- "phone", "mobile", "laptop", "charger" match "Electronics"  
+- Match by meaning, not just exact words
+- Include a match if score >= 25 (be generous)
+- If the item name or category sounds similar, include it
 
-                import re, json
+Return ONLY a JSON array, no explanation:
+[{{"id": 5, "score": 85, "reason": "Both are bags, descriptions are similar"}}]
+If truly no matches at all, return []"""
+
                 client = get_groq_client()
                 resp = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=200,
-                    temperature=0.2
+                    max_tokens=300,
+                    temperature=0.1
                 )
                 raw = resp.choices[0].message.content.strip()
+                print(f"[Match Debug] Groq raw response: {raw}", flush=True)
+
                 json_match = re.search(r'\[.*?\]', raw, re.DOTALL)
                 if json_match:
                     match_list = json.loads(json_match.group())
+                    print(f"[Match Debug] Matches from Groq: {match_list}", flush=True)
                     found_map = {i["id"]: i for i in found_items}
                     for m in match_list:
                         fid = m.get("id")
@@ -428,10 +446,17 @@ Only include items with score >= 35."""
                                 "image": item.get("image", ""),
                                 "score": m.get("score", 50),
                                 "reason": m.get("reason", "Similar item"),
+                                "status": item.get("status", ""),
                             })
+                else:
+                    print(f"[Match Debug] No JSON array found in Groq response", flush=True)
+                    error_msg = "AI returned an unexpected response. Please browse found items manually."
+
             except Exception as e:
-                print(f"Match page error: {e}", flush=True)
-                error_msg = "AI matching temporarily unavailable."
+                print(f"[Match Error] {e}", flush=True)
+                error_msg = f"AI matching error: {str(e)}"
+        else:
+            print(f"[Match Debug] No found items in DB at all", flush=True)
 
     cursor.close(); conn.close()
     return render_template("lost_item_matches.html",
