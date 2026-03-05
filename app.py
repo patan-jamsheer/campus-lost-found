@@ -159,6 +159,11 @@ def register():
     mobile     = request.form["mobile"]
     password   = request.form["password"]
 
+    # ✅ Gmail only check
+    if not email.lower().endswith("@gmail.com"):
+        return render_template("signup.html",
+            error="⚠ Only Gmail addresses are accepted (e.g. yourname@gmail.com).")
+
     file = request.files.get("profile_pic")
     filename = "default.jpeg"
     if file and file.filename:
@@ -1164,19 +1169,49 @@ def ai_chat():
         # Fetch live DB context
         db_context = get_db_context_for_chat()
 
+        faq = (
+            "--- CAMPUS LOST & FOUND FAQ ---\n\n"
+            "Q: Who is the admin?\n"
+            "A: The admin is the Lost & Found coordinator at MITS College who manages all items, approves or rejects claims, and oversees the system.\n\n"
+            "Q: How do I contact the admin?\n"
+            "A: Via the CampusBot chat in the app, or visit the college Lost & Found counter. Admin email: jamsheerkhan118@gmail.com\n\n"
+            "Q: How do I report a lost item?\n"
+            "A: Login → click Report Lost Item in sidebar → fill item name, category, description, date → submit. AI instantly scans for matching found items.\n\n"
+            "Q: How do I report a found item?\n"
+            "A: Login → click Report Found Item in sidebar → fill details and where you found it → submit.\n\n"
+            "Q: How do I claim a found item?\n"
+            "A: Browse Found Items → click the item → click Submit Claim → write why it is yours → admin reviews and approves or rejects.\n\n"
+            "Q: How long does claim approval take?\n"
+            "A: Typically within 24 hours on working days.\n\n"
+            "Q: Will I get notified when my item is found?\n"
+            "A: Yes! You get an automatic email when a found item matches your lost item report.\n\n"
+            "Q: I forgot my password. What do I do?\n"
+            "A: Click Forgot Password on the login page → enter your email → a temporary password is sent to your Gmail.\n\n"
+            "Q: Only Gmail is accepted for registration?\n"
+            "A: Yes, only @gmail.com addresses are accepted to ensure student authenticity.\n\n"
+            "Q: What categories are available?\n"
+            "A: Electronics, Books & Stationery, Clothing & Accessories, ID & Documents, Keys, Wallet & Money, Jewellery, Bag & Luggage, Sports Equipment, Other.\n\n"
+            "Q: Can I delete my report?\n"
+            "A: Yes. Go to the item detail page and click Delete. Only the owner or admin can delete.\n\n"
+            "Q: What happens after my claim is approved?\n"
+            "A: You get an email confirmation. Then coordinate with the finder or visit the Lost & Found counter to collect your item.\n\n"
+            "--- END FAQ ---\n"
+        )
+
         system_prompt = (
             "You are CampusBot, a friendly AI assistant for the Campus Lost & Found web app "
-            "at MITS College. You have access to the live database of lost and found items on campus.\n\n"
+            "at MITS College. You have access to the live database AND a full FAQ.\n\n"
             "You can answer questions like:\n"
             "- 'Is there a blue bag found on campus?' → search the found items list\n"
             "- 'How many items are lost?' → use the stats\n"
-            "- 'Someone found keys near the library?' → search found items\n"
+            "- 'How do I contact the admin?' → use the FAQ\n"
+            "- 'How do I claim an item?' → use the FAQ\n"
             "- 'I lost my laptop, has anyone found it?' → search found items for matches\n\n"
-            "Always use the database info provided to give accurate, specific answers. "
-            "If an item matches what the user is describing, mention it by name and category. "
+            "Always use the database info AND FAQ to give accurate answers. "
             "Be short, friendly and helpful. Use emojis occasionally. "
-            "If asked something completely unrelated to campus/lost&found, politely redirect.\n"
-            "App URL: https://campus-lost-found-app.onrender.com"
+            "If asked something unrelated to campus/lost&found, politely redirect.\n"
+            "App URL: https://campus-lost-found-app.onrender.com\n"
+            + faq
             + db_context
         )
 
