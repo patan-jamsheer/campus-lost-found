@@ -925,7 +925,8 @@
                     <label>Email Address</label>
                     <div class="input-wrap" data-tip="Use your college email">
                         <span class="input-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg></span>
-                        <input type="email" name="email" placeholder="you@college.edu" required>
+                        <input type="email" name="email" placeholder="yourname@gmail.com" required pattern="^[a-zA-Z0-9._%+\-]+@gmail\.com$" title="Only Gmail addresses are accepted (@gmail.com)">
+                        <div style="font-size:11px;color:#64a0d4;margin-top:4px;">✉️ Only Gmail addresses accepted</div>
                     </div>
                 </div>
 
