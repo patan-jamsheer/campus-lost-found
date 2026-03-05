@@ -208,8 +208,15 @@ def register():
     return render_template("verify_otp.html", email=email)
 
 
-@app.route("/verify_otp", methods=["POST"])
+@app.route("/verify_otp", methods=["GET", "POST"])
 def verify_otp():
+    # Handle direct GET visit (e.g. back button, direct URL)
+    if request.method == "GET":
+        pending = session.get("pending_registration")
+        if not pending:
+            return redirect(url_for("signup"))
+        return render_template("verify_otp.html", email=pending["email"])
+
     entered_otp = request.form.get("otp", "").strip()
     pending     = session.get("pending_registration")
 
@@ -265,6 +272,7 @@ def resend_otp():
 
 
 
+@app.route("/login", methods=["POST"])
 def login():
     email    = request.form["email"]
     password = request.form["password"]
@@ -938,15 +946,12 @@ def admin_delete_item(table, item_id, admin_id):
 @app.route("/admin/delete_user/<int:user_id>/<int:admin_id>", methods=["POST"])
 @admin_required
 def admin_delete_user(user_id, admin_id):
-    # Prevent admin from deleting themselves
     if user_id == admin_id:
         flash("⚠️ You cannot delete your own admin account.", "error")
         return redirect(url_for("admin_users", admin_id=admin_id))
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-
-    # Get user name for flash message
     cursor.execute("SELECT name, role FROM users WHERE id = %s", (user_id,))
     user = cursor.fetchone()
 
@@ -960,7 +965,6 @@ def admin_delete_user(user_id, admin_id):
         flash("⚠️ Cannot delete another admin account.", "error")
         return redirect(url_for("admin_users", admin_id=admin_id))
 
-    # Delete user's related data first (claims, lost items, found items)
     cursor.execute("DELETE FROM claim_requests WHERE user_id = %s", (user_id,))
     cursor.execute("DELETE FROM lost_items WHERE user_id = %s", (user_id,))
     cursor.execute("DELETE FROM found_items WHERE user_id = %s", (user_id,))
