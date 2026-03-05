@@ -288,17 +288,40 @@
             .field-full { grid-column: 1; }
             .section-label { grid-column: 1; }
             .card-body { padding: 8px 20px 24px; }
-        }
-    
-        /* ── FOOTER FIX ── */
-        body {
-            flex-direction: column !important;
-        }
-        body > div[style*="text-align:center"] {
-            width: 100% !important;
-            flex-shrink: 0 !important;
+            .btn-row { flex-direction: column; }
+            .btn-save, .btn-cancel { flex: none; width: 100%; }
+            .card { border-radius: 20px; }
+            .pic-hero { padding: 28px 20px 64px; }
         }
 
+        /* ── Page layout: card centered, footer below ── */
+        body {
+            flex-direction: column;
+            justify-content: flex-start;
+            padding-top: 40px;
+            padding-bottom: 0;
+            gap: 0;
+            min-height: 100vh;
+        }
+        .card {
+            margin-bottom: 0;
+        }
+        .footer-bar {
+            width: 100%;
+            text-align: center;
+            padding: 15px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 14px;
+            margin-top: 28px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 500px) {
+            body { padding-top: 0; }
+            .card { border-radius: 0; min-height: 100vh; margin-bottom: 0; }
+            .footer-bar { margin-top: 0; }
+        }
     </style>
 </head>
 <body>
@@ -464,6 +487,6 @@ function previewPic(input) {
 
 
 
-<div style="text-align:center; padding:15px; background:#1a1a2e; color:#fff; font-size:14px; margin-top:20px;">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
+<div class="footer-bar">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
 </body>
 </html>
