@@ -253,6 +253,35 @@ function updateHidden() {
 // Focus first box on load
 boxes[0].focus();
 
+// ✅ Auto-paste when user copies OTP from Gmail and switches back to tab
+async function tryAutoPaste() {
+    try {
+        const text = await navigator.clipboard.readText();
+        const digits = text.replace(/[^0-9]/g, "").slice(0, 6);
+        if (digits.length === 6 && hiddenInput.value.length < 6) {
+            digits.split("").forEach((ch, idx) => {
+                boxes[idx].value = ch;
+                boxes[idx].classList.add("filled");
+            });
+            boxes[5].focus();
+            updateHidden();
+            // Bounce animation to show it worked
+            const row = document.getElementById("otp-row");
+            row.style.transition = "transform 0.15s";
+            row.style.transform = "scale(1.06)";
+            setTimeout(() => row.style.transform = "scale(1)", 200);
+        }
+    } catch (e) { /* clipboard permission denied - user types manually */ }
+}
+
+// Trigger when user comes back to tab from Gmail
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") tryAutoPaste();
+});
+
+// Also trigger on window focus (mobile)
+window.addEventListener("focus", tryAutoPaste);
+
 // Countdown timer 10 minutes
 let seconds = 600;
 const countdownEl = document.getElementById('countdown');
