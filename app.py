@@ -208,8 +208,15 @@ def register():
     return render_template("verify_otp.html", email=email)
 
 
-@app.route("/verify_otp", methods=["POST"])
+@app.route("/verify_otp", methods=["GET", "POST"])
 def verify_otp():
+    # Handle direct GET visit (e.g. back button, direct URL)
+    if request.method == "GET":
+        pending = session.get("pending_registration")
+        if not pending:
+            return redirect(url_for("signup"))
+        return render_template("verify_otp.html", email=pending["email"])
+
     entered_otp = request.form.get("otp", "").strip()
     pending     = session.get("pending_registration")
 
@@ -265,6 +272,7 @@ def resend_otp():
 
 
 
+@app.route("/login", methods=["POST"])
 def login():
     email    = request.form["email"]
     password = request.form["password"]
@@ -572,7 +580,7 @@ If truly zero matches, return []"""
 
     return render_template("lost_item_matches.html",
         user=user, lost=lost, matches=matches,
-        error_msg=error_msg, current_user=g.current_user, active_page="lost_items")
+        error_msg=error_msg, current_user=g.current_user, active_page="admin_dashboard")
 
 
 @app.route("/lost_items/<int:user_id>")
@@ -864,8 +872,8 @@ def admin_dashboard(admin_id):
         notifications_on=NOTIFICATIONS_ENABLED,
         stats={"users": total_users, "lost": total_lost,
                "found": total_found, "pending_claims": pending_claims},
-        claims=claims, lost_items=lost_items, found_items=found_items,
-        current_user=g.current_user, active_page="admin_dashboard")
+        claims=claims, lost_items=lost_items, found_items=found_items
+    , current_user=g.current_user)
 
 @app.route("/admin/claim/<int:claim_id>/<action>/<int:admin_id>")
 @admin_required
