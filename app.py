@@ -155,20 +155,16 @@ def register():
     department = request.form["department"]
     year       = request.form["year"]
     section    = request.form["section"]
-    email      = request.form["email"]
+    email      = request.form["email"].strip().lower()
     mobile     = request.form["mobile"]
     password   = request.form["password"]
 
-    # ✅ Gmail only check
-    if not email.lower().endswith("@gmail.com"):
+    # Gmail only check
+    if not email.endswith("@gmail.com"):
         return render_template("signup.html",
             error="⚠ Only Gmail addresses are accepted (e.g. yourname@gmail.com).")
 
-    file = request.files.get("profile_pic")
-    filename = "default.jpeg"
-    if file and file.filename:
-        filename = upload_to_cloudinary(file, "profiles") or "default.jpeg"
-
+    # Check already registered
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
@@ -176,17 +172,99 @@ def register():
         cursor.close(); conn.close()
         return render_template("signup.html",
             error="⚠ This email is already registered. Try logging in instead.")
+    cursor.close(); conn.close()
 
+    # Upload profile pic now (before OTP, so we have the URL ready)
+    file = request.files.get("profile_pic")
+    filename = "default.jpeg"
+    if file and file.filename:
+        filename = upload_to_cloudinary(file, "profiles") or "default.jpeg"
+
+    # Generate 6-digit OTP
+    otp = str(_random.randint(100000, 999999))
+
+    # Store everything in session temporarily
+    session["pending_registration"] = {
+        "name": name, "department": department, "year": year,
+        "section": section, "email": email, "mobile": mobile,
+        "password": password, "profile_pic": filename, "otp": otp
+    }
+
+    # Send OTP email via Brevo
+    send_notification_email(
+        subject="🔐 Your Campus Lost & Found Verification Code",
+        body=(
+            f"Hi {name},\n\n"
+            f"Your email verification code is:\n\n"
+            f"  {otp}\n\n"
+            f"Enter this code on the verification page to complete your registration.\n"
+            f"This code expires when you close the page.\n\n"
+            f"If you did not request this, ignore this email.\n\n"
+            f"— Campus Lost & Found Team 🎓"
+        ),
+        recipient_list=[email]
+    )
+
+    return render_template("verify_otp.html", email=email)
+
+
+@app.route("/verify_otp", methods=["POST"])
+def verify_otp():
+    entered_otp = request.form.get("otp", "").strip()
+    pending     = session.get("pending_registration")
+
+    if not pending:
+        return render_template("signup.html",
+            error="⚠ Session expired. Please sign up again.")
+
+    if entered_otp != pending["otp"]:
+        return render_template("verify_otp.html",
+            email=pending["email"],
+            error="⚠ Incorrect OTP. Please check your Gmail and try again.")
+
+    # OTP correct — create the account
+    conn = get_db_connection()
+    cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO users (role, name, department, year, section, email, mobile, password, profile_pic)
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-    """, ("Student", name, department, year, section, email, mobile, password, filename))
+    """, ("Student", pending["name"], pending["department"], pending["year"],
+          pending["section"], pending["email"], pending["mobile"],
+          pending["password"], pending["profile_pic"]))
     cursor.close(); conn.close()
-    flash("Account created successfully! Please login.", "success")
+
+    session.pop("pending_registration", None)
+    flash("✅ Email verified! Account created successfully. Please login.", "success")
+    return redirect(url_for("home"))
+
+
     return redirect(url_for('home'))
 
 
-@app.route("/login", methods=["POST"])
+@app.route("/resend_otp")
+def resend_otp():
+    pending = session.get("pending_registration")
+    if not pending:
+        return redirect(url_for("signup"))
+    # Generate new OTP
+    new_otp = str(_random.randint(100000, 999999))
+    session["pending_registration"]["otp"] = new_otp
+    session.modified = True
+    send_notification_email(
+        subject="🔐 New Verification Code — Campus Lost & Found",
+        body=(
+            f"Hi {pending['name']},\n\n"
+            f"Your new verification code is:\n\n"
+            f"  {new_otp}\n\n"
+            f"— Campus Lost & Found Team 🎓"
+        ),
+        recipient_list=[pending["email"]]
+    )
+    return render_template("verify_otp.html", email=pending["email"],
+        success="✅ New OTP sent to your Gmail!")
+
+
+
 def login():
     email    = request.form["email"]
     password = request.form["password"]
