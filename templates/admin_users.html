@@ -43,6 +43,20 @@
 
         .btn-view { font-size: 12px; color: #0ea5e9; font-weight: 600; text-decoration: none; background: #e0f2fe; padding: 5px 12px; border-radius: 8px; transition: background 0.2s; white-space: nowrap; }
         .btn-view:hover { background: #bae6fd; }
+        .btn-delete { font-size: 12px; color: #dc2626; font-weight: 600; border: none; background: #fee2e2; padding: 5px 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s; white-space: nowrap; font-family: inherit; }
+        .btn-delete:hover { background: #fecaca; }
+        .action-cell { display: flex; gap: 8px; align-items: center; }
+
+        /* Confirm modal */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; border-radius: 16px; padding: 32px 28px; max-width: 380px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center; }
+        .modal h3 { font-family: 'Syne', sans-serif; font-size: 18px; color: #0f172a; margin-bottom: 10px; }
+        .modal p { font-size: 13px; color: #64748b; margin-bottom: 24px; line-height: 1.6; }
+        .modal-btns { display: flex; gap: 10px; justify-content: center; }
+        .modal-cancel { padding: 10px 24px; border-radius: 10px; border: 1.5px solid #e5e7eb; background: white; color: #374151; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .modal-confirm { padding: 10px 24px; border-radius: 10px; border: none; background: #ef4444; color: white; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .modal-confirm:hover { background: #dc2626; }
 
         
     
@@ -118,7 +132,12 @@
                         </td>
                         <td style="white-space:nowrap; color:#94a3b8;">{{ u.created_at.strftime('%d %b %Y') }}</td>
                         <td>
-                            <a href="{{ url_for('profile', user_id=u.id) }}" class="btn-view">View Profile</a>
+                            <div class="action-cell">
+                                <a href="{{ url_for('profile', user_id=u.id) }}" class="btn-view">View</a>
+                                {% if u.role != 'Admin' %}
+                                <button class="btn-delete" onclick="confirmDelete({{ u.id }}, '{{ u.name }}', {{ admin.id }})">Delete</button>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -128,6 +147,33 @@
     </div>
 {% endblock %}
 
-{% block extra_js %}
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+        <div style="font-size:40px; margin-bottom:12px;">🗑️</div>
+        <h3>Delete User?</h3>
+        <p id="modalMsg">This will permanently delete the user and all their lost items, found items, and claims.</p>
+        <div class="modal-btns">
+            <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+            <form id="deleteForm" method="POST">
+                <button type="submit" class="modal-confirm">Yes, Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
 
+{% block extra_js %}
+function confirmDelete(userId, userName, adminId) {
+    document.getElementById('modalMsg').textContent =
+        `This will permanently delete "${userName}" and all their items, found items, and claims. This cannot be undone.`;
+    document.getElementById('deleteForm').action = `/admin/delete_user/${userId}/${adminId}`;
+    document.getElementById('deleteModal').classList.add('show');
+}
+function closeModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+}
+// Close on backdrop click
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
 {% endblock %}
