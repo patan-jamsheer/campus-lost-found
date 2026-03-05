@@ -1,0 +1,184 @@
+{% extends "base_sidebar.html" %}
+{% block title %}Incoming Claims — Campus Lost & Found{% endblock %}
+
+{% block extra_css %}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.page-header h1 { font-family: 'Syne', sans-serif; font-size: 24px; color: #0f172a; }
+.page-header p  { color: #64748b; font-size: 13px; margin-top: 4px; }
+
+.flash { padding: 14px 18px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 500; }
+.flash.success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.flash.error   { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+
+.empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+.empty-state .icon { font-size: 52px; margin-bottom: 14px; }
+.empty-state h3 { font-family: 'Syne', sans-serif; font-size: 18px; color: #475569; margin-bottom: 8px; }
+
+.claim-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    padding: 22px 24px;
+    margin-bottom: 16px;
+    border: 1.5px solid #f1f5f9;
+    transition: box-shadow 0.2s;
+}
+.claim-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.10); }
+
+.claim-top { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.item-thumb { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; border: 2px solid #e2e8f0; flex-shrink: 0; background: #f1f5f9; }
+.item-info h3 { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: #0f172a; }
+.item-info p  { font-size: 12px; color: #64748b; margin-top: 3px; }
+
+.status-badge { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; display: inline-block; }
+.status-pending  { background: #fef9c3; color: #a16207; }
+.status-approved { background: #dcfce7; color: #15803d; }
+.status-rejected { background: #fee2e2; color: #dc2626; }
+
+.claimant-box {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.claimant-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0; flex-shrink: 0; }
+.claimant-info .name { font-weight: 700; color: #0f172a; font-size: 14px; }
+.claimant-info .detail { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+.msg-box { background: #f0f9ff; border-left: 3px solid #38bdf8; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #1e293b; margin-bottom: 14px; font-style: italic; }
+
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-handover {
+    padding: 10px 22px; background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white; border: none; border-radius: 10px; font-weight: 700;
+    font-size: 13px; cursor: pointer; font-family: inherit;
+    box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-handover:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(34,197,94,0.4); }
+.closed-badge { background: #dcfce7; color: #15803d; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+
+.time-label { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 999; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: white; border-radius: 18px; padding: 36px 28px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.modal h3 { font-family: 'Syne', sans-serif; font-size: 20px; color: #0f172a; margin-bottom: 10px; }
+.modal p  { font-size: 13px; color: #64748b; line-height: 1.6; margin-bottom: 24px; }
+.modal-btns { display: flex; gap: 10px; justify-content: center; }
+.btn-cancel  { padding: 11px 26px; border-radius: 10px; border: 1.5px solid #e5e7eb; background: white; color: #374151; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-confirm { padding: 11px 26px; border-radius: 10px; border: none; background: linear-gradient(135deg,#22c55e,#16a34a); color: white; font-weight: 700; cursor: pointer; font-family: inherit; }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📥 Incoming Claims</h1>
+    <p>People claiming items that you reported as found.</p>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+{% endwith %}
+
+{% if not claims %}
+<div class="empty-state">
+    <div class="icon">📭</div>
+    <h3>No incoming claims yet</h3>
+    <p>When someone claims an item you reported as found, it will appear here.</p>
+</div>
+{% else %}
+    {% for c in claims %}
+    <div class="claim-card">
+        <div class="claim-top">
+            {% if c.image %}
+                {% if c.image.startswith('http') %}
+                    <img class="item-thumb" src="{{ c.image }}" alt="{{ c.item_name }}">
+                {% else %}
+                    <img class="item-thumb" src="{{ url_for('static', filename='uploads/found_items/' + c.image) }}" alt="{{ c.item_name }}">
+                {% endif %}
+            {% else %}
+                <div class="item-thumb" style="display:flex;align-items:center;justify-content:center;font-size:28px;">📦</div>
+            {% endif %}
+            <div class="item-info" style="flex:1;">
+                <h3>{{ c.item_name }}</h3>
+                <p>📁 {{ c.category }} &nbsp;|&nbsp; 📍 {{ c.location_found }}</p>
+            </div>
+            <span class="status-badge status-{{ c.status | lower }}">{{ c.status }}</span>
+        </div>
+
+        <!-- Claimant details -->
+        <div class="claimant-box">
+            {% if c.claimant_pic %}
+                {% if c.claimant_pic.startswith('http') %}
+                    <img class="claimant-avatar" src="{{ c.claimant_pic }}" alt="{{ c.claimant_name }}">
+                {% else %}
+                    <img class="claimant-avatar" src="{{ url_for('static', filename='uploads/' + c.claimant_pic) }}" alt="{{ c.claimant_name }}">
+                {% endif %}
+            {% else %}
+                <div class="claimant-avatar" style="display:flex;align-items:center;justify-content:center;font-size:20px;background:#e2e8f0;">👤</div>
+            {% endif %}
+            <div class="claimant-info">
+                <div class="name">{{ c.claimant_name }}</div>
+                <div class="detail">📧 {{ c.claimant_email }}</div>
+                <div class="detail">📱 {{ c.claimant_mobile }}</div>
+            </div>
+        </div>
+
+        <!-- Claimant message -->
+        {% if c.message %}
+        <div class="msg-box">💬 "{{ c.message }}"</div>
+        {% endif %}
+
+        <div class="time-label">🕐 Claimed on {{ c.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+
+        <!-- Action -->
+        <div class="action-row" style="margin-top:14px;">
+            {% if c.status == 'Pending' and c.item_status != 'Closed' %}
+            <button class="btn-handover" onclick="confirmHandover({{ c.id }}, '{{ c.claimant_name }}', '{{ c.item_name }}', {{ user.id }})">
+                ✅ Mark as Handed Over
+            </button>
+            {% elif c.status == 'Approved' or c.item_status == 'Closed' %}
+            <span class="closed-badge">✅ Handed Over — Case Closed</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Handover Confirmation Modal -->
+<div class="modal-overlay" id="handoverModal">
+    <div class="modal">
+        <div style="font-size:44px;margin-bottom:12px;">🤝</div>
+        <h3>Confirm Handover</h3>
+        <p id="modalMsg">Are you sure you want to mark this item as handed over? This will close the case.</p>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <form id="handoverForm" method="POST">
+                <button type="submit" class="btn-confirm">✅ Yes, Handed Over</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+function confirmHandover(claimId, claimantName, itemName, userId) {
+    document.getElementById('modalMsg').textContent =
+        `Confirm that you have handed over "${itemName}" to ${claimantName}? This will close the case and notify them by email.`;
+    document.getElementById('handoverForm').action = `/handover/${claimId}/${userId}`;
+    document.getElementById('handoverModal').classList.add('show');
+}
+function closeModal() {
+    document.getElementById('handoverModal').classList.remove('show');
+}
+document.getElementById('handoverModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+{% endblock %}
