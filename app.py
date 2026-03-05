@@ -7,11 +7,19 @@ import re
 import json
 import random as _random
 import string as _string
+from datetime import datetime, timezone, timedelta
 from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message
 from groq import Groq as GroqClient
 import cloudinary
 import cloudinary.uploader
+
+# IST timezone helper
+IST = timezone(timedelta(hours=5, minutes=30))
+def now_ist():
+    return datetime.now(IST)
+def today_ist():
+    return now_ist().date()
 
 # Cloudinary config
 cloudinary.config(
@@ -74,13 +82,18 @@ CATEGORIES = [
 
 # ── DB ──────────────────────────────────────────────────────
 def get_db_connection():
-    return mysql.connector.connect(
+    conn = mysql.connector.connect(
         host=os.environ.get("MYSQL_HOST"),
         user=os.environ.get("MYSQL_USER"),
         password=os.environ.get("MYSQL_PASSWORD"),
         database=os.environ.get("MYSQL_DB"),
         autocommit=True
     )
+    # Set session timezone to IST so all datetime values are in IST
+    cursor = conn.cursor()
+    cursor.execute("SET time_zone = '+05:30'")
+    cursor.close()
+    return conn
 
 def get_user(user_id):
     """Fetch a single user by id. Returns dict or None."""
@@ -798,7 +811,40 @@ def submit_claim(item_id, user_id):
             INSERT INTO claim_requests (found_item_id, claimant_id, message)
             VALUES (%s,%s,%s)
         """, (item_id, user_id, message))
-        flash("✅ Claim request submitted! The finder will review it.", "success")
+
+        # Get item and claimant details to notify the finder
+        cursor.execute("""
+            SELECT fi.item_name, fi.category, fi.location_found,
+                   u.name AS finder_name, u.email AS finder_email,
+                   c.name AS claimant_name, c.email AS claimant_email, c.mobile AS claimant_mobile
+            FROM found_items fi
+            JOIN users u ON fi.user_id = u.id
+            JOIN users c ON c.id = %s
+            WHERE fi.id = %s
+        """, (user_id, item_id))
+        info = cursor.fetchone()
+
+        if info and info["finder_email"]:
+            send_notification_email(
+                subject=f"🔔 Someone is claiming your found item: {info['item_name']}",
+                body=(
+                    f"Hi {info['finder_name']},\n\n"
+                    f"Someone has submitted a claim on the item you reported as found.\n\n"
+                    f"📦 Item      : {info['item_name']}\n"
+                    f"📁 Category  : {info['category']}\n"
+                    f"📍 Found At  : {info['location_found']}\n\n"
+                    f"👤 Claimant  : {info['claimant_name']}\n"
+                    f"📧 Email     : {info['claimant_email']}\n"
+                    f"📱 Mobile    : {info['claimant_mobile']}\n\n"
+                    f"💬 Their message:\n\"{message}\"\n\n"
+                    f"Please log in to review this claim and mark the item as handed over if verified.\n"
+                    f"👉 https://campus-lost-found-app.onrender.com\n\n"
+                    f"— Campus Lost & Found Team 🎓"
+                ),
+                recipient_list=[info["finder_email"]]
+            )
+
+        flash("✅ Claim request submitted! The finder has been notified by email.", "success")
 
     cursor.close(); conn.close()
     return redirect(url_for("found_item_detail", item_id=item_id, user_id=user_id))
@@ -825,9 +871,79 @@ def my_claims(user_id):
 
     return render_template("my_claims.html", user=user, claims=claims, current_user=g.current_user, active_page="claims")
 
-# ════════════════════════════════════════════════════════════
-# ADMIN PANEL
-# ════════════════════════════════════════════════════════════
+
+@app.route("/incoming_claims/<int:user_id>")
+def incoming_claims(user_id):
+    """Finder sees all claim requests on items THEY reported found."""
+    user = get_user(user_id)
+    if not user:
+        return redirect(url_for("home"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT cr.*, fi.item_name, fi.category, fi.image, fi.location_found, fi.status AS item_status,
+               u.name AS claimant_name, u.email AS claimant_email, u.mobile AS claimant_mobile,
+               u.profile_pic AS claimant_pic
+        FROM claim_requests cr
+        JOIN found_items fi ON cr.found_item_id = fi.id
+        JOIN users u ON cr.claimant_id = u.id
+        WHERE fi.user_id = %s
+        ORDER BY cr.created_at DESC
+    """, (user_id,))
+    claims = cursor.fetchall()
+    cursor.close(); conn.close()
+
+    return render_template("incoming_claims.html", user=user, claims=claims, current_user=g.current_user, active_page="incoming_claims")
+
+
+@app.route("/handover/<int:claim_id>/<int:user_id>", methods=["POST"])
+def handover_item(claim_id, user_id):
+    """Finder marks the item as handed over — case closed."""
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get claim + item + claimant details
+    cursor.execute("""
+        SELECT cr.*, fi.item_name, fi.id AS found_item_id, fi.category,
+               u.name AS claimant_name, u.email AS claimant_email
+        FROM claim_requests cr
+        JOIN found_items fi ON cr.found_item_id = fi.id
+        JOIN users u ON cr.claimant_id = u.id
+        WHERE cr.id = %s AND fi.user_id = %s
+    """, (claim_id, user_id))
+    claim = cursor.fetchone()
+
+    if not claim:
+        cursor.close(); conn.close()
+        flash("⚠️ Claim not found or you are not authorized.", "error")
+        return redirect(url_for("incoming_claims", user_id=user_id))
+
+    # Mark claim as Approved and item as Closed
+    cursor.execute("UPDATE claim_requests SET status = 'Approved' WHERE id = %s", (claim_id,))
+    cursor.execute("UPDATE found_items SET status = 'Closed' WHERE id = %s", (claim["found_item_id"],))
+    cursor.close(); conn.close()
+
+    # Notify the claimant that their item is confirmed
+    send_notification_email(
+        subject=f"🎉 Your item has been handed over: {claim['item_name']}",
+        body=(
+            f"Hi {claim['claimant_name']},\n\n"
+            f"Great news! The finder has confirmed that your item has been handed over to you.\n\n"
+            f"📦 Item     : {claim['item_name']}\n"
+            f"📁 Category : {claim['category']}\n\n"
+            f"✅ Case Status: CLOSED — Item successfully returned!\n\n"
+            f"Thank you for using Campus Lost & Found.\n"
+            f"— Campus Lost & Found Team 🎓"
+        ),
+        recipient_list=[claim["claimant_email"]]
+    )
+
+    flash(f"✅ Item handed over to {claim['claimant_name']}! Case is now closed.", "success")
+    return redirect(url_for("incoming_claims", user_id=user_id))
+
+
+
 @app.route("/admin/<int:admin_id>")
 @admin_required
 def admin_dashboard(admin_id):
