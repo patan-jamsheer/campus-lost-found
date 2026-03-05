@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Profile</title>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
@@ -19,16 +21,23 @@
             --text-soft: #8a85b8;
         }
 
-        html, body { height: 100%; }
+        /* BULLETPROOF full screen on mobile */
+        html {
+            height: 100%;
+            height: 100dvh;
+        }
 
         body {
             font-family: 'DM Sans', sans-serif;
             background: var(--bg);
             min-height: 100%;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             position: relative;
             overflow-x: hidden;
+            margin: 0;
+            padding: 0;
         }
 
         body::before, body::after {
@@ -46,36 +55,43 @@
             background-size: 30px 30px; pointer-events: none;
         }
 
-        /* MOBILE: card fills screen, no gaps */
+        /* MOBILE: card fills 100% of screen, no gaps at all */
         .card {
             position: relative; z-index: 10;
             background: var(--card-bg);
             width: 100%;
-            flex: 1;
+            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            animation: rise 0.6s cubic-bezier(0.22,1,0.36,1) both;
         }
-        @keyframes rise { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
 
-        /* Footer */
+        /* Footer hidden on mobile, shown on desktop */
         .footer-bar {
-            position: relative; z-index: 10;
-            text-align: center;
-            padding: 14px;
-            background: #111827;
-            color: rgba(255,255,255,0.55);
-            font-size: 13px;
-            flex-shrink: 0;
+            display: none;
         }
-        .footer-bar b { color: rgba(255,255,255,0.85); }
 
-        /* DESKTOP ≥700px: centered card with max-width */
+        /* DESKTOP ≥700px only */
         @media (min-width: 700px) {
             body { justify-content: flex-start; align-items: center; padding: 40px 20px 0; }
-            .card { flex: none; width: 100%; max-width: 460px; border-radius: 28px; box-shadow: 0 0 0 1px rgba(92,110,248,0.1), 0 32px 72px rgba(0,0,0,0.38); }
-            .footer-bar { margin-top: 28px; width: 100%; background: transparent; color: rgba(255,255,255,0.3); font-size: 12px; }
+            .card {
+                min-height: unset;
+                width: 100%;
+                max-width: 460px;
+                border-radius: 28px;
+                box-shadow: 0 0 0 1px rgba(92,110,248,0.1), 0 32px 72px rgba(0,0,0,0.38);
+            }
+            .footer-bar {
+                display: block;
+                position: relative; z-index: 10;
+                text-align: center;
+                padding: 20px;
+                color: rgba(255,255,255,0.3);
+                font-size: 12px;
+                width: 100%;
+                margin-top: 24px;
+            }
+            .footer-bar b { color: rgba(255,255,255,0.5); }
         }
 
         /* ── Hero pic section ── */
@@ -110,8 +126,7 @@
         .pic-hero p { font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-top: 4px; position: relative; z-index: 2; }
 
         /* ── Form body ── */
-        .card-body { padding: 8px 24px 28px; flex: 1; overflow-y: auto; }
-        @media (min-width: 700px) { .card-body { padding: 8px 32px 32px; overflow-y: visible; } }
+        .card-body { padding: 8px 20px 32px; flex: 1; }
 
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
         .field-full { grid-column: 1 / -1; }
@@ -144,22 +159,19 @@
         .flash { background: #f0fff5; border: 1px solid #a8edca; border-left: 3px solid #2ecc71; color: #1a7a42; font-size: 0.82rem; padding: 10px 14px; border-radius: 10px; margin-bottom: 20px; font-weight: 500; grid-column: 1 / -1; }
         .flash.error { background: #fff0f0; border-color: #ffcccc; border-left-color: #e74c3c; color: #c0392b; }
 
-        /* Buttons */
-        .btn-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .btn-row { display: flex; gap: 8px; margin-top: 8px; }
 
-        .btn-save { display: flex; align-items: center; justify-content: center; gap: 7px; flex: 2; min-width: 120px; padding: 13px; background: linear-gradient(135deg, var(--indigo), var(--violet)); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(92,110,248,0.38); transition: transform 0.18s, box-shadow 0.18s; text-decoration: none; }
-        .btn-save:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(92,110,248,0.5); }
+        .btn-save { display: flex; align-items: center; justify-content: center; gap: 7px; flex: 2; padding: 13px; background: linear-gradient(135deg, var(--indigo), var(--violet)); color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 500; cursor: pointer; box-shadow: 0 6px 24px rgba(92,110,248,0.38); transition: transform 0.18s, box-shadow 0.18s; text-decoration: none; }
+        .btn-save:hover { transform: translateY(-2px); }
         .btn-save svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
 
-        .btn-cancel { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; min-width: 90px; padding: 13px; background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--text-mid); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; transition: background 0.18s, border-color 0.18s, color 0.18s; }
-        .btn-cancel:hover { background: #f0f0ff; border-color: #c4bffe; color: var(--indigo); }
+        .btn-cancel { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; padding: 13px; background: var(--input-bg); border: 1.5px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--text-mid); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; transition: background 0.18s; }
         .btn-cancel svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
 
-        /* Mobile: single column form */
         @media (max-width: 480px) {
             .form-grid { grid-template-columns: 1fr; }
             .field-full, .section-label { grid-column: 1; }
-            .card-body { padding: 8px 18px 24px; }
+            .card-body { padding: 8px 16px 28px; }
             .btn-row { flex-direction: column; }
             .btn-save, .btn-cancel { flex: none; width: 100%; }
         }
@@ -169,15 +181,11 @@
 <div class="bg-dots"></div>
 
 <div class="card">
-
-    <!-- Hero with live pic preview -->
     <div class="pic-hero">
         <div class="page-tag">✏ Edit Profile</div>
-
         <label class="avatar-upload" title="Click to change photo">
             <div class="avatar-ring"></div>
-            <input type="file" id="picInput" accept="image/*"
-                   onchange="previewPic(this)">
+            <input type="file" id="picInput" accept="image/*" onchange="previewPic(this)">
             <img id="preview"
                  src="{{ user.profile_pic if user.profile_pic and (user.profile_pic.startswith('http://') or user.profile_pic.startswith('https://')) else url_for('static', filename='uploads/' + (user.profile_pic if user.profile_pic else 'default.png')) }}"
                  alt="Profile Picture">
@@ -185,17 +193,13 @@
                 <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </div>
         </label>
-
         <h2>{{ user.name }}</h2>
         <p>Tap the photo to change it</p>
     </div>
 
     <div class="card-body">
         <form action="/update_profile/{{ user.id }}" method="POST" enctype="multipart/form-data">
-
-            <!-- hidden file input driven by avatar click -->
             <input type="hidden" name="_pic_changed" id="_pic_changed" value="0">
-
             <div class="form-grid">
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -205,7 +209,6 @@
                 {% endwith %}
 
                 <div class="section-label">Personal Info</div>
-
                 <div class="field field-full">
                     <label>Full Name</label>
                     <div class="input-wrap">
@@ -215,7 +218,6 @@
                 </div>
 
                 <div class="section-label">Academic Info</div>
-
                 <div class="field field-full">
                     <label>Department</label>
                     <div class="input-wrap select-wrap">
@@ -256,7 +258,6 @@
                 </div>
 
                 <div class="section-label">Contact Info</div>
-
                 <div class="field field-full">
                     <label>Email</label>
                     <div class="input-wrap">
@@ -274,7 +275,6 @@
                 </div>
 
                 <div class="section-label">Security</div>
-
                 <div class="field field-full">
                     <label>New Password <span style="font-weight:300;text-transform:none;letter-spacing:0">(leave blank to keep current)</span></label>
                     <div class="input-wrap">
@@ -283,9 +283,7 @@
                     </div>
                 </div>
 
-                <!-- hidden real file input synced from avatar click -->
                 <input type="file" name="profile_pic" id="realPicInput" accept="image/*" style="display:none">
-
             </div>
 
             <div class="btn-row">
@@ -293,7 +291,7 @@
                     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
                     Cancel
                 </a>
-                <a href="/dashboard/{{ user.id }}" class="btn-cancel" style="background:#f0f0ff; border-color:#c4bffe; color:#5c6ef8;">
+                <a href="/dashboard/{{ user.id }}" class="btn-cancel" style="background:#f0f0ff;border-color:#c4bffe;color:#5c6ef8;">
                     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                     Dashboard
                 </a>
@@ -302,20 +300,18 @@
                     Save Changes
                 </button>
             </div>
-
         </form>
     </div>
 </div>
 
+<div class="footer-bar">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
+
 <script>
-// Live preview — sync visible input to hidden real file input for form submission
 function previewPic(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = e => document.getElementById('preview').src = e.target.result;
         reader.readAsDataURL(input.files[0]);
-
-        // Transfer the file to the real named input Flask reads
         const dt = new DataTransfer();
         dt.items.add(input.files[0]);
         document.getElementById('realPicInput').files = dt.files;
@@ -323,11 +319,5 @@ function previewPic(input) {
     }
 }
 </script>
-
-
-
-
-
-<div class="footer-bar">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
 </body>
 </html>
