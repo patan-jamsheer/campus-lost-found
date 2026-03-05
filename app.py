@@ -572,7 +572,7 @@ If truly zero matches, return []"""
 
     return render_template("lost_item_matches.html",
         user=user, lost=lost, matches=matches,
-        error_msg=error_msg, current_user=g.current_user, active_page="admin_dashboard")
+        error_msg=error_msg, current_user=g.current_user, active_page="lost_items")
 
 
 @app.route("/lost_items/<int:user_id>")
@@ -864,8 +864,8 @@ def admin_dashboard(admin_id):
         notifications_on=NOTIFICATIONS_ENABLED,
         stats={"users": total_users, "lost": total_lost,
                "found": total_found, "pending_claims": pending_claims},
-        claims=claims, lost_items=lost_items, found_items=found_items
-    , current_user=g.current_user)
+        claims=claims, lost_items=lost_items, found_items=found_items,
+        current_user=g.current_user, active_page="admin_dashboard")
 
 @app.route("/admin/claim/<int:claim_id>/<action>/<int:admin_id>")
 @admin_required
