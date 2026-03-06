@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, g, jsonify
 from functools import wraps
+from dotenv import load_dotenv
+load_dotenv()
 import mysql.connector
 import os
 import threading
@@ -81,27 +83,21 @@ CATEGORIES = [
 ]
 
 # ── DB ──────────────────────────────────────────────────────
-# ── DB Connection Pool ──────────────────────────────────
-from mysql.connector import pooling
-
-db_pool = pooling.MySQLConnectionPool(
-    pool_name="campus_pool",
-    pool_size=5,
-    host=os.environ.get("MYSQL_HOST"),
-    user=os.environ.get("MYSQL_USER"),
-    password=os.environ.get("MYSQL_PASSWORD"),
-    database=os.environ.get("MYSQL_DB"),
-    port=int(os.environ.get("MYSQL_PORT", 3306)),
-    ssl_disabled=False,
-    autocommit=True
-)
-
 def get_db_connection():
-    conn = db_pool.get_connection()
+    conn = mysql.connector.connect(
+        host=os.environ.get("MYSQL_HOST"),
+        user=os.environ.get("MYSQL_USER"),
+        password=os.environ.get("MYSQL_PASSWORD"),
+        database=os.environ.get("MYSQL_DB"),
+        port=int(os.environ.get("MYSQL_PORT", 3306)),
+        ssl_disabled=False,
+        autocommit=True
+    )
     cursor = conn.cursor()
     cursor.execute("SET time_zone = '+05:30'")
     cursor.close()
     return conn
+
 def get_user(user_id):
     """Fetch a single user by id. Returns dict or None."""
     conn = get_db_connection()
@@ -1657,7 +1653,7 @@ def debug_match(lost_id):
         ]
     }
     return jsonify(result)
-# ── Keep Aiven DB awake ──────────────────────────────────
+
 
 # ════════════════════════════════════════════════════════════
 if __name__ == "__main__":
