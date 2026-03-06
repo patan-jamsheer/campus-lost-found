@@ -67,7 +67,7 @@
 
     <div class="profile-card">
         <a href="{{ url_for('profile', user_id=current_user.id) if current_user else "#" }}" class="avatar-wrap">
-            <img src="{{ current_user.profile_pic if (current_user and current_user.profile_pic.startswith('http') else url_for('static', filename='uploads/' + current_user.profile_pic)) if current_user else '' }}" alt="Profile">
+            <img src="{{ current_user.profile_pic if (current_user and current_user.profile_pic.startswith('http')) else (url_for('static', filename='uploads/' + current_user.profile_pic) if current_user else '') }}" alt="Profile">
             <span class="avatar-badge"></span>
         </a>
         <div class="profile-name">{{ current_user.name if current_user else '' }}</div>
