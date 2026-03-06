@@ -87,9 +87,10 @@ def get_db_connection():
         user=os.environ.get("MYSQL_USER"),
         password=os.environ.get("MYSQL_PASSWORD"),
         database=os.environ.get("MYSQL_DB"),
+        port=int(os.environ.get("MYSQL_PORT", 3306)),
+        ssl_disabled=False,
         autocommit=True
     )
-    # Set session timezone to IST so all datetime values are in IST
     cursor = conn.cursor()
     cursor.execute("SET time_zone = '+05:30'")
     cursor.close()
