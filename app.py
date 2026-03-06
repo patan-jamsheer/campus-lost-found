@@ -1655,18 +1655,17 @@ def debug_match(lost_id):
 import time
 
 def keep_db_alive():
-    """Ping DB every 5 mins to prevent Aiven free tier from sleeping."""
     while True:
-        time.sleep(300)  # 5 minutes
+        time.sleep(300)
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT 1")
             cursor.close()
             conn.close()
-            print("✅ DB keep-alive ping sent", flush=True)
+            print("✅ DB keep-alive ping", flush=True)
         except Exception as e:
-            print(f"⚠️ DB keep-alive failed: {e}", flush=True)
+            print(f"⚠️ Keep-alive failed: {e}", flush=True)
 
 threading.Thread(target=keep_db_alive, daemon=True).start()
 
