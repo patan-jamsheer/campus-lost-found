@@ -82,17 +82,23 @@ CATEGORIES = [
     'Bag & Luggage', 'Sports Equipment', 'Other'
 ]
 
-# ── DB ──────────────────────────────────────────────────────
+# ── DB Connection Pool ──────────────────────────────────────
+from mysql.connector import pooling as _pooling
+
+db_pool = _pooling.MySQLConnectionPool(
+    pool_name="campus_pool",
+    pool_size=5,
+    host=os.environ.get("MYSQL_HOST"),
+    user=os.environ.get("MYSQL_USER"),
+    password=os.environ.get("MYSQL_PASSWORD"),
+    database=os.environ.get("MYSQL_DB"),
+    port=int(os.environ.get("MYSQL_PORT", 3306)),
+    ssl_disabled=False,
+    autocommit=True
+)
+
 def get_db_connection():
-    conn = mysql.connector.connect(
-        host=os.environ.get("MYSQL_HOST"),
-        user=os.environ.get("MYSQL_USER"),
-        password=os.environ.get("MYSQL_PASSWORD"),
-        database=os.environ.get("MYSQL_DB"),
-        port=int(os.environ.get("MYSQL_PORT", 3306)),
-        ssl_disabled=False,
-        autocommit=True
-    )
+    conn = db_pool.get_connection()
     cursor = conn.cursor()
     cursor.execute("SET time_zone = '+05:30'")
     cursor.close()
