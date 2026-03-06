@@ -1,7 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, g, jsonify
 from functools import wraps
-from dotenv import load_dotenv
-load_dotenv()
 import mysql.connector
 import os
 import threading
