@@ -1658,22 +1658,6 @@ def debug_match(lost_id):
     }
     return jsonify(result)
 # ── Keep Aiven DB awake ──────────────────────────────────
-import time
-
-def keep_db_alive():
-    while True:
-        time.sleep(300)
-        try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT 1")
-            cursor.close()
-            conn.close()
-            print("✅ DB keep-alive ping", flush=True)
-        except Exception as e:
-            print(f"⚠️ Keep-alive failed: {e}", flush=True)
-
-threading.Thread(target=keep_db_alive, daemon=True).start()
 
 # ════════════════════════════════════════════════════════════
 if __name__ == "__main__":
