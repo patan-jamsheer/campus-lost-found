@@ -1448,10 +1448,13 @@ def ai_chat():
             "- 'How do I contact the admin?' → use the FAQ\n"
             "- 'How do I claim an item?' → use the FAQ\n"
             "- 'I lost my laptop, has anyone found it?' → search found items for matches\n\n"
-            "Always use the database info AND FAQ to give accurate answers. When mentioning specific items, ALWAYS use markdown links like [Item Name](url) - never use HTML tags. "
-            "Be short, friendly and helpful. Use emojis occasionally. "
-            "If asked something unrelated to campus/lost&found, politely redirect.\n"
-            "App URL: https://campus-lost-found-app.onrender.com\n"
+            "CRITICAL RULES:\n"
+            "1. NEVER use HTML tags like <a href=...> in your responses. NEVER.\n"
+            "2. For links, ONLY use markdown format: [Link Text](https://url) - nothing else.\n"
+            "3. To link to found items use: [Browse Found Items](https://campus-lost-found-app.onrender.com/found_items/1)\n"
+            "4. To link to lost items use: [Browse Lost Items](https://campus-lost-found-app.onrender.com/lost_items/1)\n"
+            "5. Be short, friendly and helpful. Use emojis occasionally.\n"
+            "6. If asked something unrelated to campus/lost&found, politely redirect.\n"
             + faq
             + db_context
         )
@@ -1468,12 +1471,13 @@ def ai_chat():
             temperature=0.5
         )
         reply = resp.choices[0].message.content.strip()
+        import re as _re
+        reply = _re.sub(r'<a[^>]+href=[^>]+>(.*?)</a>', r'\1', reply, flags=_re.IGNORECASE|_re.DOTALL)
+        reply = _re.sub(r'<[^>]+>', '', reply)
         return jsonify({"reply": reply})
     except Exception as e:
         print(f"Groq chat error: {e}", flush=True)
         return jsonify({"reply": "Sorry, AI is unavailable right now. Please try again later!"}), 500
-
-
 # ── 2. SMART ITEM MATCHING ─────────────────────────────────
 @app.route("/api/match/<int:lost_item_id>/<int:user_id>")
 def ai_match_items(lost_item_id, user_id):
