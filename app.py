@@ -1631,7 +1631,7 @@ Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and
                 ]
             }]
             resp = client.chat.completions.create(
-                model="meta-llama/llama-4-scout-17b-16e-instruct",
+                model="llama-3.2-11b-vision-preview",
                 messages=messages,
                 max_tokens=150,
                 temperature=0.6
