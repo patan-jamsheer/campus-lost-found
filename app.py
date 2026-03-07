@@ -1377,12 +1377,12 @@ def get_db_context_for_chat():
         cursor.close(); conn.close()
 
         lost_lines = "\n".join([
-            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (lost {i['date_lost']}, status: {i['status']}) | Link: https://campus-lost-found-app.onrender.com/lost_items/1"
+            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (lost {i['date_lost']}, status: {i['status']}) | Browse: https://campus-lost-found-app.onrender.com"
             for i in lost_items
         ]) or "  None currently."
 
         found_lines = "\n".join([
-            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (found at {i.get('location_found','?')} on {i['date_found']}) | Link: https://campus-lost-found-app.onrender.com/found_items/1"
+            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (found at {i.get('location_found','?')} on {i['date_found']}) | Browse: https://campus-lost-found-app.onrender.com"
             for i in found_items
         ]) or "  None currently available."
 
@@ -1448,7 +1448,7 @@ def ai_chat():
             "- 'How do I contact the admin?' → use the FAQ\n"
             "- 'How do I claim an item?' → use the FAQ\n"
             "- 'I lost my laptop, has anyone found it?' → search found items for matches\n\n"
-            "Always use the database info AND FAQ to give accurate answers. When mentioning specific items, include clickable markdown links like [Item Name](url). "
+            "Always use the database info AND FAQ to give accurate answers. When mentioning specific items, ALWAYS use markdown links like [Item Name](url) - never use HTML tags. "
             "Be short, friendly and helpful. Use emojis occasionally. "
             "If asked something unrelated to campus/lost&found, politely redirect.\n"
             "App URL: https://campus-lost-found-app.onrender.com\n"
