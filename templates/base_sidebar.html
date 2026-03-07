@@ -266,10 +266,6 @@ function addMsg(text, role) {
         var formatted = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, function(m, t, u) {
             return '<a href="' + u + '" target="_blank" style="color:#6366f1;font-weight:600;text-decoration:underline;">' + t + '</a>';
         });
-        // Convert bare URLs to links
-        formatted = formatted.replace(/(https?:\/\/[^\s<)"\]]+)/g, function(u) {
-            return '<a href="' + u + '" target="_blank" style="color:#6366f1;text-decoration:underline;">' + u + '</a>';
-        });
         div.innerHTML = formatted;
     } else {
         div.textContent = text;
