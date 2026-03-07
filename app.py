@@ -1451,8 +1451,8 @@ def ai_chat():
             "CRITICAL RULES:\n"
             "1. NEVER use HTML tags like <a href=...> in your responses. NEVER.\n"
             "2. For links, ONLY use markdown format: [Link Text](https://url) - nothing else.\n"
-            "3. To link to found items use: [Browse Found Items](https://campus-lost-found-app.onrender.com/found_items/1)\n"
-            "4. To link to lost items use: [Browse Lost Items](https://campus-lost-found-app.onrender.com/lost_items/1)\n"
+            "3. Do NOT include any URLs or links. Tell users to use the sidebar menu instead.\n"
+            "4. Say things like: Browse Found Items in the sidebar, or click Report Lost Item in the menu.\n"
             "5. Be short, friendly and helpful. Use emojis occasionally.\n"
             "6. If asked something unrelated to campus/lost&found, politely redirect.\n"
             + faq
