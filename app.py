@@ -1608,13 +1608,20 @@ def ai_generate_description():
         except Exception as db_err:
             print(f"DB context fetch error (non-fatal): {db_err}", flush=True)
 
-        image_hint = "Look at the image carefully and describe the item's visual details (color, brand, condition, distinguishing features)." if image_base64 else ""
-        prompt_text = f"""Write a clear, helpful {item_type} item report description for a campus lost & found app.
+        if image_base64:
+            prompt_text = f"""You are helping write a campus lost & found report. Look ONLY at the image provided.
+Describe EXACTLY what you see in the image - the actual item, its color, brand, size, condition, any markings.
+DO NOT describe "{item_name}" - describe what is VISUALLY in the image.
+Category hint: {category}
+Extra details from user: {keywords}
+
+Write ONLY 2-3 sentences describing the item in the image. No intro, no quotes."""
+        else:
+            prompt_text = f"""Write a clear, helpful {item_type} item report description for a campus lost & found app.
 Item: {item_name}
 Category: {category}
 Keywords/details: {keywords}{db_context}
 
-{image_hint}
 Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and descriptive."""
 
         client = get_groq_client()
