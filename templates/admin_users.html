@@ -163,6 +163,22 @@
 </div>
 
 {% block extra_js %}
+function filterUsers() {
+    var query = document.getElementById('userSearch').value.toLowerCase();
+    var rows = document.querySelectorAll('.user-row');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var data = row.getAttribute('data-search') || '';
+        if (data.includes(query)) {
+            row.style.display = '';
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    document.getElementById('userCount').textContent = visible + ' users';
+}
+
 function confirmDelete(userId, userName, adminId) {
     document.getElementById('modalMsg').textContent =
         `This will permanently delete "${userName}" and all their items, found items, and claims. This cannot be undone.`;
