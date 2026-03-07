@@ -259,7 +259,18 @@ function addMsg(text, role) {
     var msgs = document.getElementById('chatbot-messages');
     var div = document.createElement('div');
     div.className = 'chat-msg ' + role;
-    div.textContent = text;
+    if (role === 'bot') {
+        // Convert [text](url) markdown links to clickable HTML
+        var formatted = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" style="color:#6366f1;text-decoration:underline;">$1</a>');
+        // Also convert bare URLs
+        formatted = formatted.replace(/(https?:\/\/[^\s<]+)/g, function(url) {
+            if (url.indexOf('<') === -1) return '<a href="' + url + '" target="_blank" style="color:#6366f1;text-decoration:underline;">' + url + '</a>';
+            return url;
+        });
+        div.innerHTML = formatted;
+    } else {
+        div.textContent = text;
+    }
     msgs.appendChild(div);
     scrollChatBottom();
     return div;
