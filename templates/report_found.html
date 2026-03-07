@@ -263,6 +263,7 @@ function aiGenerateDesc(itemType) {
     var category = document.getElementById('category').value.trim();
     var descArea = document.getElementById('description');
     var btn = document.getElementById('ai-desc-btn');
+    var imageInput = document.getElementById('image');
 
     if (!itemName) {
         alert('Please enter the item name first!');
@@ -273,35 +274,49 @@ function aiGenerateDesc(itemType) {
     btn.disabled = true;
     btn.innerHTML = '⏳ Generating...';
 
-    fetch('/api/generate_description', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            item_name: itemName,
-            category: category,
-            keywords: descArea.value.trim(),
-            type: itemType
+    function doFetch(imageBase64) {
+        fetch('/api/generate_description', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                item_name: itemName,
+                category: category,
+                keywords: descArea.value.trim(),
+                type: itemType,
+                image_base64: imageBase64 || null
+            })
         })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.description) {
-            descArea.value = data.description;
-            descArea.style.borderColor = '#6366f1';
-            descArea.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.15)';
-            setTimeout(() => {
-                descArea.style.borderColor = '';
-                descArea.style.boxShadow = '';
-            }, 2000);
-        } else {
-            alert('AI could not generate a description. Please try again.');
-        }
-    })
-    .catch(() => alert('Connection error. Please try again.'))
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = '✨ AI Generate Description';
-    });
+        .then(r => r.json())
+        .then(data => {
+            if (data.description) {
+                descArea.value = data.description;
+                descArea.style.borderColor = '#6366f1';
+                descArea.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.15)';
+                setTimeout(() => {
+                    descArea.style.borderColor = '';
+                    descArea.style.boxShadow = '';
+                }, 2000);
+            } else {
+                alert('AI could not generate a description. Please try again.');
+            }
+        })
+        .catch(() => alert('Connection error. Please try again.'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '✨ AI Generate Description';
+        });
+    }
+
+    if (imageInput && imageInput.files && imageInput.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var base64 = e.target.result.split(',')[1];
+            doFetch(base64);
+        };
+        reader.readAsDataURL(imageInput.files[0]);
+    } else {
+        doFetch(null);
+    }
 }
 
 // Image preview
