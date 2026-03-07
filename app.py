@@ -1377,12 +1377,12 @@ def get_db_context_for_chat():
         cursor.close(); conn.close()
 
         lost_lines = "\n".join([
-            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (lost {i['date_lost']}, status: {i['status']})"
+            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (lost {i['date_lost']}, status: {i['status']}) | Link: https://campus-lost-found-app.onrender.com/lost_items/1"
             for i in lost_items
         ]) or "  None currently."
 
         found_lines = "\n".join([
-            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (found at {i.get('location_found','?')} on {i['date_found']})"
+            f"  - [{i['category']}] {i['item_name']}: {i['description'][:60]} (found at {i.get('location_found','?')} on {i['date_found']}) | Link: https://campus-lost-found-app.onrender.com/found_items/1"
             for i in found_items
         ]) or "  None currently available."
 
@@ -1448,7 +1448,7 @@ def ai_chat():
             "- 'How do I contact the admin?' → use the FAQ\n"
             "- 'How do I claim an item?' → use the FAQ\n"
             "- 'I lost my laptop, has anyone found it?' → search found items for matches\n\n"
-            "Always use the database info AND FAQ to give accurate answers. "
+            "Always use the database info AND FAQ to give accurate answers. When mentioning specific items, include clickable markdown links like [Item Name](url). "
             "Be short, friendly and helpful. Use emojis occasionally. "
             "If asked something unrelated to campus/lost&found, politely redirect.\n"
             "App URL: https://campus-lost-found-app.onrender.com\n"
@@ -1567,13 +1567,14 @@ Only include matches with score >= 40."""
 # ── 3. AI DESCRIPTION GENERATOR ───────────────────────────
 @app.route("/api/generate_description", methods=["POST"])
 def ai_generate_description():
-    """Generate a good item description from basic keywords, enriched with DB context."""
+    """Generate a good item description from keywords + optional image using Groq vision."""
     try:
         data = request.get_json()
-        item_name = data.get("item_name", "").strip()
-        category  = data.get("category", "").strip()
-        keywords  = data.get("keywords", "").strip()
-        item_type = data.get("type", "lost")  # "lost" or "found"
+        item_name    = data.get("item_name", "").strip()
+        category     = data.get("category", "").strip()
+        keywords     = data.get("keywords", "").strip()
+        item_type    = data.get("type", "lost")
+        image_base64 = data.get("image_base64", None)
 
         if not item_name:
             return jsonify({"description": ""}), 400
@@ -1598,26 +1599,51 @@ def ai_generate_description():
             if rows:
                 samples = [r["description"] for r in rows if r.get("description")][:3]
                 if samples:
-                    db_context = "\n\nFor reference, here are similar existing descriptions on this campus:\n" + \
-                                 "\n".join(f"- {s[:80]}" for s in samples)
+                    db_context = "
+
+For reference, here are similar existing descriptions on this campus:
+" +                                  "
+".join(f"- {s[:80]}" for s in samples)
         except Exception as db_err:
             print(f"DB context fetch error (non-fatal): {db_err}", flush=True)
 
-        prompt = f"""Write a clear, helpful {item_type} item report description for a campus lost & found app.
+        image_hint = "Look at the image carefully and describe the item's visual details (color, brand, condition, distinguishing features)." if image_base64 else ""
+        prompt_text = f"""Write a clear, helpful {item_type} item report description for a campus lost & found app.
 Item: {item_name}
 Category: {category}
 Keywords/details: {keywords}{db_context}
 
+{image_hint}
 Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and descriptive."""
 
         client = get_groq_client()
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=120,
-            temperature=0.6
-        )
-        desc = resp.choices[0].message.content.strip().strip('"\'\'` ')
+
+        if image_base64:
+            messages = [{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                    },
+                    {"type": "text", "text": prompt_text}
+                ]
+            }]
+            resp = client.chat.completions.create(
+                model="meta-llama/llama-4-scout-17b-16e-instruct",
+                messages=messages,
+                max_tokens=150,
+                temperature=0.6
+            )
+        else:
+            resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt_text}],
+                max_tokens=120,
+                temperature=0.6
+            )
+
+        desc = resp.choices[0].message.content.strip().strip('"''` ')
         return jsonify({"description": desc})
     except Exception as e:
         print(f"Groq desc error: {e}", flush=True)
