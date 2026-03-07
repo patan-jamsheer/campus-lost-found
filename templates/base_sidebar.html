@@ -260,12 +260,15 @@ function addMsg(text, role) {
     var div = document.createElement('div');
     div.className = 'chat-msg ' + role;
     if (role === 'bot') {
-        // Convert [text](url) markdown links to clickable HTML
-        var formatted = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" style="color:#6366f1;text-decoration:underline;">$1</a>');
-        // Also convert bare URLs
-        formatted = formatted.replace(/(https?:\/\/[^\s<]+)/g, function(url) {
-            if (url.indexOf('<') === -1) return '<a href="' + url + '" target="_blank" style="color:#6366f1;text-decoration:underline;">' + url + '</a>';
-            return url;
+        // Strip any HTML tags Groq might generate
+        var safe = text.replace(/<[^>]*>/g, '');
+        // Convert markdown [text](url) to clickable links
+        var formatted = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, function(m, t, u) {
+            return '<a href="' + u + '" target="_blank" style="color:#6366f1;font-weight:600;text-decoration:underline;">' + t + '</a>';
+        });
+        // Convert bare URLs to links
+        formatted = formatted.replace(/(https?:\/\/[^\s<)"\]]+)/g, function(u) {
+            return '<a href="' + u + '" target="_blank" style="color:#6366f1;text-decoration:underline;">' + u + '</a>';
         });
         div.innerHTML = formatted;
     } else {
