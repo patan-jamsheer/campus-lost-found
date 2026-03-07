@@ -1599,11 +1599,8 @@ def ai_generate_description():
             if rows:
                 samples = [r["description"] for r in rows if r.get("description")][:3]
                 if samples:
-                    db_context = "
-
-For reference, here are similar existing descriptions on this campus:
-" +                                  "
-".join(f"- {s[:80]}" for s in samples)
+                    db_context = "\n\nFor reference, here are similar existing descriptions on this campus:\n" + \
+                                 "\n".join(f"- {s[:80]}" for s in samples)
         except Exception as db_err:
             print(f"DB context fetch error (non-fatal): {db_err}", flush=True)
 
