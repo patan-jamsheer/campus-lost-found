@@ -135,7 +135,11 @@
                             <div class="action-cell">
                                 <a href="{{ url_for('profile', user_id=u.id) }}" class="btn-view">View</a>
                                 {% if u.role != 'Admin' %}
-                                <button class="btn-delete" onclick="confirmDelete({{ u.id }}, '{{ u.name }}', {{ admin.id }})">Delete</button>
+                                <button class="btn-delete" 
+                                    data-uid="{{ u.id }}" 
+                                    data-name="{{ u.name | e }}" 
+                                    data-adminid="{{ admin.id }}"
+                                    onclick="confirmDelete(this.dataset.uid, this.dataset.name, this.dataset.adminid)">Delete</button>
                                 {% endif %}
                             </div>
                         </td>
