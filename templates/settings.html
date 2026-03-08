@@ -96,15 +96,15 @@
             <p>Email notifications are sent via Brevo when new items are reported.</p>
             <div class="setting-item">
                 <div><div class="setting-item-label">Lost Item Alerts</div><div class="setting-item-sub">Get notified when items are reported lost</div></div>
-                <label class="toggle"><input type="checkbox" id="tog1" onchange="savePref('lost_alerts', this.checked)"><span class="toggle-slider"></span></label>
+                <label class="toggle"><input type="checkbox" id="tog1" onchange="savePref()"><span class="toggle-slider"></span></label>
             </div>
             <div class="setting-item">
                 <div><div class="setting-item-label">Found Item Alerts</div><div class="setting-item-sub">Get notified when items are found</div></div>
-                <label class="toggle"><input type="checkbox" id="tog2" onchange="savePref('found_alerts', this.checked)"><span class="toggle-slider"></span></label>
+                <label class="toggle"><input type="checkbox" id="tog2" onchange="savePref()"><span class="toggle-slider"></span></label>
             </div>
             <div class="setting-item">
                 <div><div class="setting-item-label">Claim Updates</div><div class="setting-item-sub">Notified when claim status changes</div></div>
-                <label class="toggle"><input type="checkbox" id="tog3" onchange="savePref('claim_updates', this.checked)"><span class="toggle-slider"></span></label>
+                <label class="toggle"><input type="checkbox" id="tog3" onchange="savePref()"><span class="toggle-slider"></span></label>
             </div>
             <div id="notifMsg" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(56,189,248,0.1);border-radius:8px;font-size:13px;color:#0ea5e9;">✅ Preference saved!</div>
         </div>
@@ -127,23 +127,35 @@
 
 {% block extra_js %}
 
-// Notification preferences
-function savePref(key, val){
-    try { localStorage.setItem('notif_'+key, val); } catch(e){}
-    var msg = document.getElementById('notifMsg');
-    if(msg){ msg.style.display='block'; setTimeout(()=>msg.style.display='none', 2000); }
+// Notification preferences — real API
+async function savePref(){
+    var data = {
+        notif_lost:   document.getElementById('tog1').checked,
+        notif_found:  document.getElementById('tog2').checked,
+        notif_claims: document.getElementById('tog3').checked
+    };
+    try {
+        await fetch('/api/notification_pref', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        var msg = document.getElementById('notifMsg');
+        if(msg){ msg.style.display='block'; setTimeout(()=>msg.style.display='none', 2000); }
+    } catch(e){ console.error('Failed to save pref', e); }
 }
-function loadPrefs(){
-    var keys = [['tog1','lost_alerts'],['tog2','found_alerts'],['tog3','claim_updates']];
-    keys.forEach(function(k){
-        var el = document.getElementById(k[0]);
-        if(el){
-            try {
-                var val = localStorage.getItem('notif_'+k[1]);
-                el.checked = (val === null) ? true : val === 'true';
-            } catch(e){ el.checked = true; }
-        }
-    });
+
+async function loadPrefs(){
+    try {
+        var res = await fetch('/api/notification_pref');
+        var data = await res.json();
+        document.getElementById('tog1').checked = data.notif_lost;
+        document.getElementById('tog2').checked = data.notif_found;
+        document.getElementById('tog3').checked = data.notif_claims;
+    } catch(e){
+        // fallback: all on
+        ['tog1','tog2','tog3'].forEach(id => document.getElementById(id).checked = true);
+    }
 }
 loadPrefs();
 
