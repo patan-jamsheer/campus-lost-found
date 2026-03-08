@@ -7,8 +7,11 @@ import re
 import json
 import random as _random
 import string as _string
+import secrets
+import time
 from datetime import datetime, timezone, timedelta
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
 from groq import Groq as GroqClient
 import cloudinary
@@ -28,16 +31,81 @@ cloudinary.config(
     api_secret = os.environ.get("CLOUDINARY_API_SECRET")
 )
 
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
 def upload_to_cloudinary(file, folder):
+    # ✅ Validate file extension before uploading
+    if not allowed_file(file.filename):
+        print(f"❌ Blocked upload: invalid file type '{file.filename}'", flush=True)
+        return None
     try:
-        result = cloudinary.uploader.upload(file, folder=folder)
+        result = cloudinary.uploader.upload(
+            file, folder=folder,
+            allowed_formats=list(ALLOWED_EXTENSIONS),  # Cloudinary also enforces it
+            resource_type="image"
+        )
         return result["secure_url"]
     except Exception as e:
         print(f"Cloudinary upload error: {e}", flush=True)
         return None
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "campus_secret_key_2024")
+
+# ── Secret Key — MUST be set in Render env vars ──────────────
+_secret = os.environ.get("SECRET_KEY")
+if not _secret:
+    raise RuntimeError("❌ SECRET_KEY environment variable is not set! Set it in Render.")
+app.secret_key = _secret
+
+# ── Rate Limiting (in-memory) ────────────────────────────────
+# Tracks failed login attempts: { ip: {"count": N, "blocked_until": timestamp} }
+_login_attempts = {}
+_MAX_ATTEMPTS   = 5       # max failed logins
+_BLOCK_SECONDS  = 900     # 15 minutes block
+
+def _get_ip():
+    return request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
+
+def _is_rate_limited(ip):
+    entry = _login_attempts.get(ip)
+    if not entry:
+        return False
+    if entry["blocked_until"] and time.time() < entry["blocked_until"]:
+        return True
+    if entry["blocked_until"] and time.time() >= entry["blocked_until"]:
+        _login_attempts.pop(ip, None)  # unblock after timeout
+    return False
+
+def _record_failed_login(ip):
+    entry = _login_attempts.get(ip, {"count": 0, "blocked_until": None})
+    entry["count"] += 1
+    if entry["count"] >= _MAX_ATTEMPTS:
+        entry["blocked_until"] = time.time() + _BLOCK_SECONDS
+    _login_attempts[ip] = entry
+
+def _clear_login_attempts(ip):
+    _login_attempts.pop(ip, None)
+
+# ── CSRF Protection ──────────────────────────────────────────
+def generate_csrf_token():
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    return session["csrf_token"]
+
+def csrf_protect(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if request.method == "POST":
+            token = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")
+            if not token or token != session.get("csrf_token"):
+                return "403 — CSRF check failed. Please go back and try again.", 403
+        return f(*args, **kwargs)
+    return decorated
+
+app.jinja_env.globals["csrf_token"] = generate_csrf_token
 
 # ── Global Notification Toggle (Admin controlled) ──
 NOTIFICATIONS_ENABLED = True
@@ -272,7 +340,7 @@ def verify_otp():
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, ("Student", pending["name"], pending["department"], pending["year"],
           pending["section"], pending["email"], pending["mobile"],
-          pending["password"], pending["profile_pic"]))
+          generate_password_hash(pending["password"]), pending["profile_pic"]))
     cursor.close(); conn.close()
 
     session.pop("pending_registration", None)
@@ -309,8 +377,14 @@ def resend_otp():
 
 @app.route("/login", methods=["POST"])
 def login():
+    ip       = _get_ip()
     email    = request.form["email"]
     password = request.form["password"]
+
+    # ✅ Rate limit check — block after 5 failed attempts for 15 min
+    if _is_rate_limited(ip):
+        return render_template("login.html",
+            error="too_many_attempts", submitted_email=email)
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -319,15 +393,18 @@ def login():
     cursor.close(); conn.close()
 
     if not user:
+        _record_failed_login(ip)
         return render_template("login.html", error="not_found", submitted_email=email)
-    if user["password"] != password:
+
+    # ✅ Secure hash comparison instead of plain text
+    if not check_password_hash(user["password"], password):
+        _record_failed_login(ip)
         return render_template("login.html", error="wrong_password", submitted_email=email)
 
-    # ✅ FIX: store session so refresh/back-button works
+    _clear_login_attempts(ip)  # ✅ Reset attempts on success
     session["user_id"]   = user["id"]
     session["user_role"] = user["role"]
 
-    # Admin → admin panel, everyone else → dashboard
     if user["role"] == "Admin":
         return redirect(url_for("admin_dashboard", admin_id=user["id"]))
     return redirect(url_for("dashboard_user", user_id=user["id"]))
@@ -426,7 +503,8 @@ def update_profile(user_id):
         cursor.execute("""
             UPDATE users SET name=%s, department=%s, year=%s, section=%s,
             email=%s, mobile=%s, password=%s, profile_pic=%s WHERE id=%s
-        """, (name, department, year, section, email, mobile, password, profile_pic, user_id))
+        """, (name, department, year, section, email, mobile,
+              generate_password_hash(password), profile_pic, user_id))
     else:
         cursor.execute("""
             UPDATE users SET name=%s, department=%s, year=%s, section=%s,
@@ -1238,7 +1316,8 @@ def forgot_password():
         cursor.close(); conn.close()
         return render_template("forgot_password.html", error="No account found with this email address.")
     temp_password = ''.join(_random.choices(_string.ascii_letters + _string.digits, k=8))
-    cursor.execute("UPDATE users SET password = %s WHERE email = %s", (temp_password, email))
+    cursor.execute("UPDATE users SET password = %s WHERE email = %s",
+                   (generate_password_hash(temp_password), email))
     cursor.close(); conn.close()
     send_notification_email(
         subject="\U0001f510 Password Reset \u2014 Campus Lost & Found",
@@ -1705,40 +1784,6 @@ Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and
         print(f"Groq desc error: {e}", flush=True)
         return jsonify({"description": "", "error": str(e)}), 500
 
-
-
-@app.route("/api/debug_match/<int:lost_id>")
-def debug_match(lost_id):
-    """Temporary debug route — shows raw DB category values for matching."""
-    from flask import jsonify
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id, item_name, category, status FROM lost_items WHERE id = %s", (lost_id,))
-    lost = cursor.fetchone()
-    cursor.execute("SELECT id, item_name, category, status FROM found_items ORDER BY id DESC LIMIT 20")
-    found = cursor.fetchall()
-    cursor.close(); conn.close()
-
-    result = {
-        "lost_item": {
-            "id": lost["id"] if lost else None,
-            "item_name": lost["item_name"] if lost else None,
-            "category": lost["category"] if lost else None,
-            "category_repr": repr(lost["category"]) if lost else None,
-        },
-        "found_items": [
-            {
-                "id": f["id"],
-                "item_name": f["item_name"],
-                "category": f["category"],
-                "category_repr": repr(f["category"]),
-                "status": f["status"],
-                "category_matches": (f["category"] or "").strip().lower() == (lost["category"] or "").strip().lower() if lost else False
-            }
-            for f in found
-        ]
-    }
-    return jsonify(result)
 
 
 # ════════════════════════════════════════════════════════════
