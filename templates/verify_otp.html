@@ -183,6 +183,7 @@
     {% endif %}
 
     <form action="/verify_otp" method="POST" id="otp-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="otp-row" id="otp-row">
             <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="0" autocomplete="off">
             <input class="otp-box" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="1" autocomplete="off">

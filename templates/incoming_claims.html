@@ -161,6 +161,7 @@
         <div class="modal-btns">
             <button class="btn-cancel" onclick="closeModal()">Cancel</button>
             <form id="handoverForm" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-confirm">✅ Yes, Handed Over</button>
             </form>
         </div>

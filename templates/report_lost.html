@@ -110,6 +110,7 @@
         </div>
 
         <form action="/report_lost" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="user_id" value="{{ user.id }}">
 
             <div class="form-row">

@@ -109,6 +109,7 @@
 
     <!-- ── Admin Notification Toggle ── -->
     <form method="POST" action="{{ url_for('toggle_notifications', admin_id=admin.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" style="
             margin-bottom: 20px;
             padding: 12px 24px;
@@ -270,6 +271,7 @@
                             <td><span class="s-pill {% if item.status == 'Searching' %}s-searching{% elif item.status == 'Found' %}s-found{% elif item.status == 'Available' %}s-available{% elif item.status == 'Claimed' %}s-claimed{% else %}s-closed{% endif %}">{{ item.status }}</span></td>
                             <td>
                                 <form action="{{ url_for('admin_update_lost_status', item_id=item.id, admin_id=admin.id) }}" method="POST" class="status-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <select name="status">
                                         <option {% if item.status == 'Searching' %}selected{% endif %}>Searching</option>
                                         <option {% if item.status == 'Found'     %}selected{% endif %}>Found</option>
@@ -333,6 +335,7 @@
                             <td><span class="s-pill {% if item.status == 'Searching' %}s-searching{% elif item.status == 'Found' %}s-found{% elif item.status == 'Available' %}s-available{% elif item.status == 'Claimed' %}s-claimed{% else %}s-closed{% endif %}">{{ item.status }}</span></td>
                             <td>
                                 <form action="{{ url_for('admin_update_found_status', item_id=item.id, admin_id=admin.id) }}" method="POST" class="status-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <select name="status">
                                         <option {% if item.status == 'Available' %}selected{% endif %}>Available</option>
                                         <option {% if item.status == 'Claimed'   %}selected{% endif %}>Claimed</option>

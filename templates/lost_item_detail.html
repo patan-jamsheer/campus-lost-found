@@ -256,6 +256,7 @@
                             {% if user.id == item.user_id or user.role == 'Admin' %}
                             <form action="{{ url_for('delete_lost_item', item_id=item.id, user_id=user.id) }}" method="POST"
                                   onsubmit="return confirm('Are you sure you want to delete this item? This cannot be undone.')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn-delete">
                                     🗑 {% if user.role == 'Admin' %}Admin Delete{% else %}Delete My Report{% endif %}
                                 </button>

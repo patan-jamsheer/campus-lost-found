@@ -150,6 +150,7 @@
                 <div class="claim-section-title">🙋 Is this your item?</div>
                 <p>If this belongs to you, submit a claim request. The finder will review and approve or reject it.</p>
                 <form action="{{ url_for('submit_claim', item_id=item.id, user_id=user.id) }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <textarea name="message" placeholder="Describe how you know this is yours — colour, brand, what was inside, where you lost it… The more detail, the better!"></textarea>
                     <button type="submit" class="btn-claim">🤝 Submit Claim Request</button>
                 </form>
@@ -209,6 +210,7 @@
                 {% if user.id == item.user_id or user.role == 'Admin' %}
                 <form action="{{ url_for('delete_found_item', item_id=item.id, user_id=user.id) }}" method="POST"
                       onsubmit="return confirm('Delete this found item? All claim requests will also be removed. This cannot be undone.')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-delete">
                         🗑 {% if user.role == 'Admin' %}Admin Delete{% else %}Delete My Report{% endif %}
                     </button>

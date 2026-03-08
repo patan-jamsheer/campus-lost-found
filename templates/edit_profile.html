@@ -199,6 +199,7 @@
 
     <div class="card-body">
         <form action="/update_profile/{{ user.id }}" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="_pic_changed" id="_pic_changed" value="0">
             <div class="form-grid">
 

@@ -160,6 +160,7 @@
         {% endwith %}
 
         <form action="/login" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="field">
                 <label for="email">Email Address</label>
                 <div class="input-wrap">

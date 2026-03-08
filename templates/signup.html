@@ -859,6 +859,7 @@
         </div>
 
         <form id="signupForm" action="/register" method="POST" enctype="multipart/form-data" onsubmit="return validateForm(event)">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div class="form-grid">
 

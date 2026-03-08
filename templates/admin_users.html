@@ -156,6 +156,7 @@
         <div class="modal-btns">
             <button class="modal-cancel" onclick="closeModal()">Cancel</button>
             <form id="deleteForm" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="modal-confirm">Yes, Delete</button>
             </form>
         </div>
