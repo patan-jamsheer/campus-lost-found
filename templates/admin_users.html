@@ -135,11 +135,12 @@
                             <div class="action-cell">
                                 <a href="{{ url_for('profile', user_id=u.id) }}" class="btn-view">View</a>
                                 {% if u.role != 'Admin' %}
-                                <button class="btn-delete" 
-                                    data-uid="{{ u.id }}" 
-                                    data-name="{{ u.name | e }}" 
-                                    data-adminid="{{ admin.id }}"
-                                    onclick="confirmDelete(this.dataset.uid, this.dataset.name, this.dataset.adminid)">Delete</button>
+                                <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id, admin_id=admin.id) }}" 
+                                      onsubmit="return confirm('Delete {{ u.name | e }}? This cannot be undone.');"
+                                      style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn-delete">Delete</button>
+                                </form>
                                 {% endif %}
                             </div>
                         </td>
