@@ -1211,7 +1211,9 @@ def admin_delete_user(user_id, admin_id):
         flash("⚠️ Cannot delete another admin account.", "error")
         return redirect(url_for("admin_users", admin_id=admin_id))
 
-    cursor.execute("DELETE FROM claim_requests WHERE user_id = %s", (user_id,))
+    # Delete all related data before deleting the user
+    cursor.execute("DELETE FROM claim_requests WHERE claimant_id = %s", (user_id,))  # claims made by user
+    cursor.execute("DELETE FROM claim_requests WHERE found_item_id IN (SELECT id FROM found_items WHERE user_id = %s)", (user_id,))  # claims on user's found items
     cursor.execute("DELETE FROM lost_items WHERE user_id = %s", (user_id,))
     cursor.execute("DELETE FROM found_items WHERE user_id = %s", (user_id,))
     cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
