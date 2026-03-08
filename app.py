@@ -1399,6 +1399,7 @@ def notification_pref():
     return jsonify({"status": "saved"})
 
 
+@app.route("/admin/toggle_notifications/<int:admin_id>", methods=["POST"])
 @admin_required
 def toggle_notifications(admin_id):
     global NOTIFICATIONS_ENABLED
