@@ -179,11 +179,20 @@ def get_user(user_id):
     cursor.close(); conn.close()
     return user
 
-def get_all_user_emails():
-    """Get all registered user emails (excluding Admin)."""
+def get_all_user_emails(notif_type="lost"):
+    """Get emails of users who have this notification type enabled.
+    notif_type: 'lost' | 'found' | 'claims'
+    """
+    col_map = {"lost": "notif_lost", "found": "notif_found", "claims": "notif_claims"}
+    col = col_map.get(notif_type, "notif_lost")
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT email FROM users WHERE role != 'Admin'")
+    # COALESCE handles existing users who don't have the column yet (defaults to 1)
+    cursor.execute(f"""
+        SELECT email FROM users
+        WHERE role != 'Admin'
+        AND COALESCE({col}, 1) = 1
+    """)
     emails = [row['email'] for row in cursor.fetchall()]
     cursor.close(); conn.close()
     return emails
@@ -556,8 +565,8 @@ def submit_report_lost():
     new_id = cursor.lastrowid  # ✅ grab ID before closing cursor
     cursor.close(); conn.close()
 
-    # 🔔 Send email notification to ALL users
-    all_emails = get_all_user_emails()
+    # 🔔 Send email notification to users who have lost alerts enabled
+    all_emails = get_all_user_emails(notif_type="lost")
     if all_emails and NOTIFICATIONS_ENABLED:
         send_notification_email(
             subject=f"🔍 Lost Item Alert: {item_name}",
@@ -810,8 +819,8 @@ def submit_report_found():
     """, (user_id, item_name, description, category, location_found, date_found, image_filename))
     cursor.close(); conn.close()
 
-    # 🔔 Send email notification to ALL users
-    all_emails = get_all_user_emails()
+    # 🔔 Send email notification to users who have found alerts enabled
+    all_emails = get_all_user_emails(notif_type="found")
     if all_emails and NOTIFICATIONS_ENABLED:
         send_notification_email(
             subject=f"✅ Found Item Alert: {item_name}",
@@ -1361,7 +1370,35 @@ def api_stats(user_id):
 
 
 
-@app.route("/admin/toggle_notifications/<int:admin_id>", methods=["POST"])
+@app.route("/api/notification_pref", methods=["GET", "POST"])
+@login_required
+def notification_pref():
+    """Get or save notification preferences for the logged-in user."""
+    user_id = session["user_id"]
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if request.method == "GET":
+        cursor.execute("SELECT notif_lost, notif_found, notif_claims FROM users WHERE id = %s", (user_id,))
+        row = cursor.fetchone()
+        cursor.close(); conn.close()
+        return jsonify({
+            "notif_lost":   bool(row.get("notif_lost",   1)) if row else True,
+            "notif_found":  bool(row.get("notif_found",  1)) if row else True,
+            "notif_claims": bool(row.get("notif_claims", 1)) if row else True,
+        })
+
+    data = request.get_json()
+    notif_lost   = 1 if data.get("notif_lost",   True) else 0
+    notif_found  = 1 if data.get("notif_found",  True) else 0
+    notif_claims = 1 if data.get("notif_claims", True) else 0
+    cursor.execute("""
+        UPDATE users SET notif_lost=%s, notif_found=%s, notif_claims=%s WHERE id=%s
+    """, (notif_lost, notif_found, notif_claims, user_id))
+    cursor.close(); conn.close()
+    return jsonify({"status": "saved"})
+
+
 @admin_required
 def toggle_notifications(admin_id):
     global NOTIFICATIONS_ENABLED
