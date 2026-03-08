@@ -145,13 +145,28 @@ def send_notification_email(subject, body, recipient_list):
             print(f"❌ Email error: {e}", flush=True)
     threading.Thread(target=send).start()
 
+# ── Login guard ─────────────────────────────────────────────
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("home"))
+        return f(*args, **kwargs)
+    return decorated
+
 # ── Admin guard ─────────────────────────────────────────────
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Must be logged in first
+        if "user_id" not in session:
+            return redirect(url_for("home"))
         admin_id = kwargs.get('admin_id')
         if not admin_id:
             return redirect(url_for('home'))
+        # Session user must match the admin_id in URL
+        if session["user_id"] != admin_id:
+            return "403 — Forbidden", 403
         u = get_user(admin_id)
         if not u or u['role'] != 'Admin':
             return "403 — Admins only", 403
@@ -333,7 +348,11 @@ def dashboard():
     return redirect(url_for("dashboard_user", user_id=session["user_id"]))
 
 @app.route("/dashboard/<int:user_id>")
+@login_required
 def dashboard_user(user_id):
+    # Prevent accessing another user's dashboard
+    if session["user_id"] != user_id:
+        return redirect(url_for("dashboard_user", user_id=session["user_id"]))
     user = get_user(user_id)
     if not user:
         return redirect(url_for("home"))
@@ -345,6 +364,7 @@ def dashboard_user(user_id):
 # PROFILE
 # ════════════════════════════════════════════════════════════
 @app.route("/profile/<int:user_id>")
+@login_required
 def profile(user_id):
     user = get_user(user_id)
     if not user:
@@ -355,14 +375,20 @@ def profile(user_id):
     return render_template("profile.html", user=user, current_user=viewer, active_page="profile")
 
 @app.route("/edit_profile/<int:user_id>")
+@login_required
 def edit_profile(user_id):
+    if session["user_id"] != user_id:
+        return "403 — You can only edit your own profile", 403
     user = get_user(user_id)
     if not user:
         return "User not found", 404
     return render_template("edit_profile.html", user=user, current_user=g.current_user, active_page="profile")
 
 @app.route("/update_profile/<int:user_id>", methods=["POST"])
+@login_required
 def update_profile(user_id):
+    if session["user_id"] != user_id:
+        return "403 — You can only update your own profile", 403
     user = get_user(user_id)
     if not user:
         return "User not found", 404
@@ -415,15 +441,19 @@ def update_profile(user_id):
 # LOST ITEMS
 # ════════════════════════════════════════════════════════════
 @app.route("/report_lost/<int:user_id>")
+@login_required
 def report_lost(user_id):
+    if session["user_id"] != user_id:
+        return redirect(url_for("report_lost", user_id=session["user_id"]))
     user = get_user(user_id)
     if not user:
         return redirect(url_for("home"))
     return render_template("report_lost.html", user=user, current_user=g.current_user, active_page="report_lost")
 
 @app.route("/report_lost", methods=["POST"])
+@login_required
 def submit_report_lost():
-    user_id     = request.form["user_id"]
+    user_id     = session["user_id"]   # ✅ NEVER trust user_id from form
     item_name   = request.form["item_name"].strip()
     description = request.form["description"].strip()
     category    = request.form["category"]
@@ -604,6 +634,7 @@ If truly zero matches, return []"""
 
 
 @app.route("/lost_items/<int:user_id>")
+@login_required
 def lost_items_list(user_id):
     user = get_user(user_id)
     if not user:
@@ -665,15 +696,19 @@ def lost_item_detail(item_id, viewer_id):
 # FOUND ITEMS
 # ════════════════════════════════════════════════════════════
 @app.route("/report_found/<int:user_id>")
+@login_required
 def report_found(user_id):
+    if session["user_id"] != user_id:
+        return redirect(url_for("report_found", user_id=session["user_id"]))
     user = get_user(user_id)
     if not user:
         return redirect(url_for("home"))
     return render_template("report_found.html", user=user, current_user=g.current_user, active_page="report_found")
 
 @app.route("/report_found", methods=["POST"])
+@login_required
 def submit_report_found():
-    user_id        = request.form["user_id"]
+    user_id        = session["user_id"]   # ✅ NEVER trust user_id from form
     item_name      = request.form["item_name"].strip()
     description    = request.form["description"].strip()
     category       = request.form["category"]
@@ -727,6 +762,7 @@ def submit_report_found():
     return redirect(url_for("report_found", user_id=user_id))
 
 @app.route("/found_items/<int:user_id>")
+@login_required
 def found_items_list(user_id):
     user = get_user(user_id)
     if not user:
@@ -802,7 +838,10 @@ def found_item_detail(item_id, user_id):
 # CLAIMS
 # ════════════════════════════════════════════════════════════
 @app.route("/claim_request/<int:item_id>/<int:user_id>", methods=["POST"])
+@login_required
 def submit_claim(item_id, user_id):
+    if session["user_id"] != user_id:
+        return "403 — Forbidden", 403
     message = request.form.get("message", "").strip()
 
     conn = get_db_connection()
@@ -857,7 +896,10 @@ def submit_claim(item_id, user_id):
     return redirect(url_for("found_item_detail", item_id=item_id, user_id=user_id))
 
 @app.route("/my_claims/<int:user_id>")
+@login_required
 def my_claims(user_id):
+    if session["user_id"] != user_id:
+        return "403 — You can only view your own claims", 403
     user = get_user(user_id)
     if not user:
         return redirect(url_for("home"))
@@ -880,8 +922,11 @@ def my_claims(user_id):
 
 
 @app.route("/incoming_claims/<int:user_id>")
+@login_required
 def incoming_claims(user_id):
     """Finder sees all claim requests on items THEY reported found."""
+    if session["user_id"] != user_id:
+        return "403 — You can only view your own incoming claims", 403
     user = get_user(user_id)
     if not user:
         return redirect(url_for("home"))
@@ -1210,7 +1255,10 @@ def forgot_password():
 
 
 @app.route("/settings/<int:user_id>")
+@login_required
 def settings(user_id):
+    if session["user_id"] != user_id:
+        return redirect(url_for("settings", user_id=session["user_id"]))
     user = get_user(user_id)
     if not user:
         return redirect(url_for('home'))
