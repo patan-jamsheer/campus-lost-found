@@ -1124,42 +1124,26 @@ def admin_dashboard(admin_id):
     # ── ANALYTICS ──
     cursor.execute("SELECT category, COUNT(*) as cnt FROM lost_items GROUP BY category ORDER BY cnt DESC")
     lost_by_cat = cursor.fetchall()
-
     cursor.execute("SELECT category, COUNT(*) as cnt FROM found_items GROUP BY category ORDER BY cnt DESC")
     found_by_cat = cursor.fetchall()
-
     cursor.execute("SELECT status, COUNT(*) as cnt FROM claim_requests GROUP BY status")
     claims_status = {r['status']: r['cnt'] for r in cursor.fetchall()}
-
-    cursor.execute("""
-        SELECT DATE(created_at) as day, COUNT(*) as cnt FROM lost_items
-        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-        GROUP BY DATE(created_at) ORDER BY day ASC
-    """)
+    cursor.execute("""SELECT DATE(created_at) as day, COUNT(*) as cnt FROM lost_items
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) GROUP BY DATE(created_at) ORDER BY day ASC""")
     lost_activity_raw = {str(r['day']): r['cnt'] for r in cursor.fetchall()}
-
-    cursor.execute("""
-        SELECT DATE(created_at) as day, COUNT(*) as cnt FROM found_items
-        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-        GROUP BY DATE(created_at) ORDER BY day ASC
-    """)
+    cursor.execute("""SELECT DATE(created_at) as day, COUNT(*) as cnt FROM found_items
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) GROUP BY DATE(created_at) ORDER BY day ASC""")
     found_activity_raw = {str(r['day']): r['cnt'] for r in cursor.fetchall()}
-
     from datetime import date, timedelta
     activity_labels = [(date.today() - timedelta(days=i)).strftime('%d %b') for i in range(6, -1, -1)]
     activity_keys   = [(date.today() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(6, -1, -1)]
     lost_activity   = [lost_activity_raw.get(k, 0) for k in activity_keys]
     found_activity  = [found_activity_raw.get(k, 0) for k in activity_keys]
-
     cursor.execute("SELECT COUNT(*) as n FROM lost_items WHERE status = 'Found'")
     resolved = cursor.fetchone()['n']
     resolution_rate = round((resolved / total_lost * 100) if total_lost > 0 else 0)
-
-    cursor.execute("""
-        SELECT u.name, COUNT(*) as cnt FROM lost_items li
-        JOIN users u ON li.user_id = u.id
-        GROUP BY u.id, u.name ORDER BY cnt DESC LIMIT 5
-    """)
+    cursor.execute("""SELECT u.name, COUNT(*) as cnt FROM lost_items li
+        JOIN users u ON li.user_id = u.id GROUP BY u.id, u.name ORDER BY cnt DESC LIMIT 5""")
     top_users = cursor.fetchall()
     cursor.close(); conn.close()
 
@@ -1175,8 +1159,7 @@ def admin_dashboard(admin_id):
             "lost_activity": lost_activity, "found_activity": found_activity,
             "resolution_rate": resolution_rate, "top_users": top_users,
             "resolved": resolved,
-        }
-    , current_user=g.current_user)
+        }, current_user=g.current_user)
 
 @app.route("/admin/claim/<int:claim_id>/<action>/<int:admin_id>")
 @admin_required
@@ -2106,6 +2089,63 @@ def all_conversations(user_id):
     cursor.close(); conn.close()
     return render_template("messages.html", me=me, conversations=conversations,
                            current_user=g.current_user, active_page="messages")
+
+
+# ════════════════════════════════════════════════════════════
+# LIVE FEED API
+# ════════════════════════════════════════════════════════════
+@app.route("/api/live_feed")
+@login_required
+def live_feed():
+    """Returns latest 15 lost+found items combined, newer than optional `after_id`."""
+    after_lost  = request.args.get("after_lost",  0, type=int)
+    after_found = request.args.get("after_found", 0, type=int)
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT li.id, li.item_name, li.category, li.date_lost AS item_date,
+               li.created_at, li.image, li.status, li.user_id,
+               u.name AS reporter_name,
+               'lost' AS feed_type
+        FROM lost_items li JOIN users u ON li.user_id = u.id
+        WHERE li.id > %s
+        ORDER BY li.created_at DESC LIMIT 8
+    """, (after_lost,))
+    lost = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT fi.id, fi.item_name, fi.category, fi.date_found AS item_date,
+               fi.created_at, fi.image, fi.status, fi.user_id,
+               u.name AS reporter_name,
+               'found' AS feed_type
+        FROM found_items fi JOIN users u ON fi.user_id = u.id
+        WHERE fi.id > %s
+        ORDER BY fi.created_at DESC LIMIT 8
+    """, (after_found,))
+    found = cursor.fetchall()
+    cursor.close(); conn.close()
+
+    feed = []
+    for item in lost + found:
+        feed.append({
+            "id":            item["id"],
+            "feed_type":     item["feed_type"],
+            "item_name":     item["item_name"],
+            "category":      item["category"] or "Other",
+            "reporter_name": item["reporter_name"],
+            "status":        item["status"],
+            "_sort_key":     item["created_at"],
+            "created_at":    item["created_at"].strftime("%d %b, %I:%M %p"),
+            "image":         item["image"] or "",
+        })
+
+    # Sort by raw datetime descending, then remove sort key
+    feed.sort(key=lambda x: x["_sort_key"], reverse=True)
+    for f in feed:
+        del f["_sort_key"]
+    return jsonify(feed[:15])
 
 
 if __name__ == "__main__":
