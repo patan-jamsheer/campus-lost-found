@@ -2092,6 +2092,46 @@ def all_conversations(user_id):
 
 
 # ════════════════════════════════════════════════════════════
+# SUCCESS STORIES
+# ════════════════════════════════════════════════════════════
+@app.route("/success_stories/<int:user_id>")
+@login_required
+def success_stories(user_id):
+    user = get_user(user_id)
+    if not user:
+        return redirect(url_for("home"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT COUNT(*) as n FROM found_items WHERE status = 'Claimed'")
+    total_reunited = cursor.fetchone()['n']
+
+    cursor.execute("""
+        SELECT fi.id, fi.item_name, fi.category, fi.image,
+               fi.location_found, fi.date_found,
+               uf.name AS finder_name, uf.department AS finder_dept,
+               uf.profile_pic AS finder_pic,
+               uc.name AS owner_name, uc.department AS owner_dept,
+               uc.profile_pic AS owner_pic,
+               cr.created_at AS reunited_at
+        FROM found_items fi
+        JOIN claim_requests cr ON cr.found_item_id = fi.id AND cr.status = 'Approved'
+        JOIN users uf ON fi.user_id = uf.id
+        JOIN users uc ON cr.claimant_id = uc.id
+        WHERE fi.status = 'Claimed'
+        ORDER BY cr.created_at DESC
+        LIMIT 30
+    """)
+    stories = cursor.fetchall()
+    cursor.close(); conn.close()
+
+    return render_template("success_stories.html",
+        user=user, stories=stories, total_reunited=total_reunited,
+        current_user=g.current_user, active_page="success_stories")
+
+
+# ════════════════════════════════════════════════════════════
 # LIVE FEED API
 # ════════════════════════════════════════════════════════════
 @app.route("/api/live_feed")
