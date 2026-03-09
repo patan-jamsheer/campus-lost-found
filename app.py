@@ -1120,57 +1120,6 @@ def admin_dashboard(admin_id):
         JOIN users u ON fi.user_id = u.id ORDER BY fi.created_at DESC LIMIT 10
     """)
     found_items = cursor.fetchall()
-
-    # ── ANALYTICS QUERIES ──
-    # Lost items by category
-    cursor.execute("SELECT category, COUNT(*) as cnt FROM lost_items GROUP BY category ORDER BY cnt DESC")
-    lost_by_cat = cursor.fetchall()
-
-    # Found items by category
-    cursor.execute("SELECT category, COUNT(*) as cnt FROM found_items GROUP BY category ORDER BY cnt DESC")
-    found_by_cat = cursor.fetchall()
-
-    # Claims status breakdown
-    cursor.execute("SELECT status, COUNT(*) as cnt FROM claim_requests GROUP BY status")
-    claims_status = {r['status']: r['cnt'] for r in cursor.fetchall()}
-
-    # Activity last 7 days
-    cursor.execute("""
-        SELECT DATE(created_at) as day, COUNT(*) as cnt
-        FROM lost_items
-        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-        GROUP BY DATE(created_at) ORDER BY day ASC
-    """)
-    lost_activity_raw = {str(r['day']): r['cnt'] for r in cursor.fetchall()}
-
-    cursor.execute("""
-        SELECT DATE(created_at) as day, COUNT(*) as cnt
-        FROM found_items
-        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-        GROUP BY DATE(created_at) ORDER BY day ASC
-    """)
-    found_activity_raw = {str(r['day']): r['cnt'] for r in cursor.fetchall()}
-
-    # Build last 7 days labels
-    from datetime import date, timedelta
-    activity_labels = [(date.today() - timedelta(days=i)).strftime('%d %b') for i in range(6, -1, -1)]
-    activity_keys   = [(date.today() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(6, -1, -1)]
-    lost_activity   = [lost_activity_raw.get(k, 0) for k in activity_keys]
-    found_activity  = [found_activity_raw.get(k, 0) for k in activity_keys]
-
-    # Resolution rate
-    cursor.execute("SELECT COUNT(*) as n FROM lost_items WHERE status = 'Found'")
-    resolved = cursor.fetchone()['n']
-    resolution_rate = round((resolved / total_lost * 100) if total_lost > 0 else 0)
-
-    # Top 5 active users
-    cursor.execute("""
-        SELECT u.name, COUNT(*) as cnt
-        FROM lost_items li JOIN users u ON li.user_id = u.id
-        GROUP BY u.id, u.name ORDER BY cnt DESC LIMIT 5
-    """)
-    top_users = cursor.fetchall()
-
     cursor.close(); conn.close()
 
     return render_template("admin_dashboard.html",
@@ -1178,20 +1127,8 @@ def admin_dashboard(admin_id):
         notifications_on=NOTIFICATIONS_ENABLED,
         stats={"users": total_users, "lost": total_lost,
                "found": total_found, "pending_claims": pending_claims},
-        claims=claims, lost_items=lost_items, found_items=found_items,
-        analytics={
-            "lost_by_cat":      lost_by_cat,
-            "found_by_cat":     found_by_cat,
-            "claims_status":    claims_status,
-            "activity_labels":  activity_labels,
-            "lost_activity":    lost_activity,
-            "found_activity":   found_activity,
-            "resolution_rate":  resolution_rate,
-            "top_users":        top_users,
-            "resolved":         resolved,
-        },
-        current_user=g.current_user
-    )
+        claims=claims, lost_items=lost_items, found_items=found_items
+    , current_user=g.current_user)
 
 @app.route("/admin/claim/<int:claim_id>/<action>/<int:admin_id>")
 @admin_required
@@ -1890,5 +1827,238 @@ Write ONLY the description (2-3 sentences, no intro, no quotes). Be specific and
 
 
 # ════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════
+# MESSAGING SYSTEM
+# ════════════════════════════════════════════════════════════
+
+@app.route("/chat/<item_type>/<int:item_id>/<int:user_id>")
+@login_required
+def chat_page(item_type, item_id, user_id):
+    if session["user_id"] != user_id:
+        return redirect(url_for("chat_page", item_type=item_type, item_id=item_id, user_id=session["user_id"]))
+
+    me = get_user(user_id)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get item info + owner
+    if item_type == "found":
+        cursor.execute("""
+            SELECT fi.*, u.name AS owner_name, u.profile_pic AS owner_pic, u.id AS owner_id
+            FROM found_items fi JOIN users u ON fi.user_id = u.id WHERE fi.id = %s
+        """, (item_id,))
+    else:
+        cursor.execute("""
+            SELECT li.*, u.name AS owner_name, u.profile_pic AS owner_pic, u.id AS owner_id
+            FROM lost_items li JOIN users u ON li.user_id = u.id WHERE li.id = %s
+        """, (item_id,))
+
+    item = cursor.fetchone()
+    if not item:
+        cursor.close(); conn.close()
+        return redirect(url_for("home"))
+
+    # Determine the other person in the chat
+    other_id = item["owner_id"] if item["owner_id"] != user_id else None
+
+    # If I'm the owner, I need a specific conversation partner
+    partner_id = request.args.get("with", type=int)
+    if not partner_id:
+        if item["owner_id"] == user_id:
+            # owner viewing chat — show list of who messaged
+            cursor.execute("""
+                SELECT DISTINCT
+                    CASE WHEN sender_id = %s THEN receiver_id ELSE sender_id END AS partner_id
+                FROM messages WHERE item_type = %s AND item_id = %s AND (sender_id = %s OR receiver_id = %s)
+            """, (user_id, item_type, item_id, user_id, user_id))
+            partners_raw = cursor.fetchall()
+            partners = []
+            for p in partners_raw:
+                pid = p["partner_id"]
+                cursor.execute("SELECT id, name, profile_pic FROM users WHERE id = %s", (pid,))
+                pu = cursor.fetchone()
+                if pu:
+                    cursor.execute("""
+                        SELECT COUNT(*) AS cnt FROM messages
+                        WHERE item_type=%s AND item_id=%s AND sender_id=%s AND receiver_id=%s AND is_read=0
+                    """, (item_type, item_id, pid, user_id))
+                    unread = cursor.fetchone()["cnt"]
+                    pu["unread"] = unread
+                    partners.append(pu)
+            cursor.close(); conn.close()
+            return render_template("chat_inbox.html", me=me, item=item, item_type=item_type,
+                                   partners=partners, current_user=g.current_user, active_page="messages")
+        else:
+            partner_id = item["owner_id"]
+
+    # Load conversation between me and partner
+    cursor.execute("SELECT id, name, profile_pic, department FROM users WHERE id = %s", (partner_id,))
+    partner = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT m.*, u.name AS sender_name, u.profile_pic AS sender_pic
+        FROM messages m JOIN users u ON m.sender_id = u.id
+        WHERE m.item_type = %s AND m.item_id = %s
+          AND ((m.sender_id = %s AND m.receiver_id = %s) OR (m.sender_id = %s AND m.receiver_id = %s))
+        ORDER BY m.created_at ASC
+    """, (item_type, item_id, user_id, partner_id, partner_id, user_id))
+    messages_list = cursor.fetchall()
+
+    # Mark messages to me as read
+    cursor.execute("""
+        UPDATE messages SET is_read = 1
+        WHERE item_type=%s AND item_id=%s AND sender_id=%s AND receiver_id=%s AND is_read=0
+    """, (item_type, item_id, partner_id, user_id))
+    conn.commit()
+    cursor.close(); conn.close()
+
+    return render_template("chat.html", me=me, item=item, item_type=item_type,
+                           partner=partner, messages_list=messages_list,
+                           current_user=g.current_user, active_page="messages")
+
+
+@app.route("/api/send_message", methods=["POST"])
+@login_required
+def send_message():
+    data = request.get_json()
+    sender_id  = session["user_id"]
+    receiver_id = int(data.get("receiver_id", 0))
+    item_id    = int(data.get("item_id", 0))
+    item_type  = data.get("item_type", "")
+    text       = data.get("message", "").strip()
+
+    if not text or not receiver_id or not item_id or item_type not in ("lost", "found"):
+        return jsonify({"ok": False, "error": "Invalid data"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        INSERT INTO messages (item_type, item_id, sender_id, receiver_id, message)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (item_type, item_id, sender_id, receiver_id, text))
+    conn.commit()
+    new_id = cursor.lastrowid
+
+    cursor.execute("""
+        SELECT m.*, u.name AS sender_name, u.profile_pic AS sender_pic
+        FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = %s
+    """, (new_id,))
+    msg = cursor.fetchone()
+    cursor.close(); conn.close()
+
+    return jsonify({
+        "ok": True,
+        "message": {
+            "id": msg["id"],
+            "sender_id": msg["sender_id"],
+            "sender_name": msg["sender_name"],
+            "message": msg["message"],
+            "created_at": msg["created_at"].strftime("%I:%M %p"),
+            "is_read": 0
+        }
+    })
+
+
+@app.route("/api/poll_messages/<item_type>/<int:item_id>/<int:user_id>/<int:partner_id>/<int:last_id>")
+@login_required
+def poll_messages(item_type, item_id, user_id, partner_id, last_id):
+    if session["user_id"] != user_id:
+        return jsonify([])
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT m.*, u.name AS sender_name
+        FROM messages m JOIN users u ON m.sender_id = u.id
+        WHERE m.item_type=%s AND m.item_id=%s AND m.id > %s
+          AND ((m.sender_id=%s AND m.receiver_id=%s) OR (m.sender_id=%s AND m.receiver_id=%s))
+        ORDER BY m.created_at ASC
+    """, (item_type, item_id, last_id, user_id, partner_id, partner_id, user_id))
+    new_msgs = cursor.fetchall()
+
+    # Mark new incoming as read
+    cursor.execute("""
+        UPDATE messages SET is_read=1
+        WHERE item_type=%s AND item_id=%s AND sender_id=%s AND receiver_id=%s AND is_read=0
+    """, (item_type, item_id, partner_id, user_id))
+    conn.commit()
+    cursor.close(); conn.close()
+
+    return jsonify([{
+        "id": m["id"],
+        "sender_id": m["sender_id"],
+        "sender_name": m["sender_name"],
+        "message": m["message"],
+        "created_at": m["created_at"].strftime("%I:%M %p")
+    } for m in new_msgs])
+
+
+@app.route("/api/unread_count/<int:user_id>")
+@login_required
+def unread_count(user_id):
+    if session["user_id"] != user_id:
+        return jsonify({"count": 0})
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT COUNT(*) AS cnt FROM messages WHERE receiver_id=%s AND is_read=0", (user_id,))
+    cnt = cursor.fetchone()["cnt"]
+    cursor.close(); conn.close()
+    return jsonify({"count": cnt})
+
+
+@app.route("/messages/<int:user_id>")
+@login_required
+def all_conversations(user_id):
+    if session["user_id"] != user_id:
+        return redirect(url_for("all_conversations", user_id=session["user_id"]))
+    me = get_user(user_id)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get all distinct conversations
+    cursor.execute("""
+        SELECT
+            CASE WHEN sender_id = %s THEN receiver_id ELSE sender_id END AS partner_id,
+            item_type, item_id,
+            MAX(id) AS last_msg_id,
+            MAX(created_at) AS last_time,
+            SUM(CASE WHEN receiver_id=%s AND is_read=0 THEN 1 ELSE 0 END) AS unread
+        FROM messages
+        WHERE sender_id=%s OR receiver_id=%s
+        GROUP BY partner_id, item_type, item_id
+        ORDER BY last_time DESC
+    """, (user_id, user_id, user_id, user_id))
+    raw = cursor.fetchall()
+
+    conversations = []
+    for r in raw:
+        cursor.execute("SELECT id, name, profile_pic, department FROM users WHERE id=%s", (r["partner_id"],))
+        partner = cursor.fetchone()
+        cursor.execute("SELECT message FROM messages WHERE id=%s", (r["last_msg_id"],))
+        last_msg = cursor.fetchone()
+
+        # Get item name
+        if r["item_type"] == "found":
+            cursor.execute("SELECT item_name FROM found_items WHERE id=%s", (r["item_id"],))
+        else:
+            cursor.execute("SELECT item_name FROM lost_items WHERE id=%s", (r["item_id"],))
+        item_info = cursor.fetchone()
+
+        if partner and last_msg and item_info:
+            conversations.append({
+                "partner": partner,
+                "item_type": r["item_type"],
+                "item_id": r["item_id"],
+                "item_name": item_info["item_name"],
+                "last_msg": last_msg["message"],
+                "last_time": r["last_time"].strftime("%d %b, %I:%M %p"),
+                "unread": r["unread"]
+            })
+
+    cursor.close(); conn.close()
+    return render_template("messages.html", me=me, conversations=conversations,
+                           current_user=g.current_user, active_page="messages")
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
