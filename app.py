@@ -715,6 +715,69 @@ If truly zero matches, return []"""
     # Sort by score descending
     matches.sort(key=lambda x: x["score"], reverse=True)
 
+    # ── AUTO EMAIL ALERT: notify owner + finder for strong matches (score >= 70) ──
+    if matches and NOTIFICATIONS_ENABLED and lost:
+        strong = [m for m in matches if m.get("score", 0) >= 70]
+        if strong:
+            try:
+                # Get reporter (owner) email
+                owner = get_user(lost["user_id"])
+                owner_email = owner["email"] if owner else None
+
+                # Notify owner
+                if owner_email:
+                    top = strong[0]
+                    send_notification_email(
+                        subject=f"🎉 Possible Match Found for Your Lost {lost['item_name']}!",
+                        body=(
+                            f"Hi {owner['name']}!\n\n"
+                            f"Great news! Our AI found a strong match for your lost item.\n\n"
+                            f"🔍 Your Lost Item : {lost['item_name']}\n"
+                            f"✅ Possible Match : {top['item_name']}\n"
+                            f"📁 Category       : {top['category']}\n"
+                            f"📍 Found At       : {top.get('location_found') or 'Not specified'}\n"
+                            f"🤝 Found By       : {top['finder_name']}\n"
+                            f"🎯 Match Score    : {top['score']}%\n\n"
+                            f"Log in to view the match and contact the finder:\n"
+                            f"👉 https://campus-lost-found-app.onrender.com\n\n"
+                            f"— Campus Lost & Found Team"
+                        ),
+                        recipient_list=[owner_email]
+                    )
+
+                # Notify each finder (max 2 to avoid spam)
+                conn2 = get_db_connection()
+                cur2  = conn2.cursor(dictionary=True)
+                try:
+                    notified_finders = set()
+                    for m in strong[:2]:
+                        cur2.execute("""
+                            SELECT u.email, u.name FROM found_items fi
+                            JOIN users u ON fi.user_id = u.id
+                            WHERE fi.id = %s
+                        """, (m["id"],))
+                        finder = cur2.fetchone()
+                        if finder and finder["email"] not in notified_finders:
+                            notified_finders.add(finder["email"])
+                            send_notification_email(
+                                subject=f"🔍 Someone May Be Looking for the Item You Found!",
+                                body=(
+                                    f"Hi {finder['name']}!\n\n"
+                                    f"Someone just reported a lost item that closely matches something you found.\n\n"
+                                    f"✅ Item You Found  : {m['item_name']}\n"
+                                    f"🔍 Their Lost Item : {lost['item_name']}\n"
+                                    f"🎯 Match Score     : {m['score']}%\n\n"
+                                    f"Log in to check — the owner may reach out to you soon!\n"
+                                    f"👉 https://campus-lost-found-app.onrender.com\n\n"
+                                    f"— Campus Lost & Found Team"
+                                ),
+                                recipient_list=[finder["email"]]
+                            )
+                finally:
+                    cur2.close(); conn2.close()
+            except Exception as e:
+                print(f"[Match Email Error] {e}", flush=True)
+
     return render_template("lost_item_matches.html",
         user=user, lost=lost, matches=matches,
         error_msg=error_msg, current_user=g.current_user, active_page="admin_dashboard")
