@@ -55,6 +55,32 @@
             .info-banner { flex-direction: column; text-align: center; }
             .info-links { justify-content: center; }
         }
+
+        /* ── LIVE FEED ── */
+        .feed-section { margin-bottom: 28px; }
+        .feed-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .feed-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #0f172a; }
+        .live-dot { display: flex; align-items: center; gap: 6px; background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 99px; letter-spacing: 0.05em; }
+        .live-dot::before { content: ''; width: 7px; height: 7px; background: #dc2626; border-radius: 50%; animation: blink 1.2s ease-in-out infinite; }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+        .feed-list { display: flex; flex-direction: column; gap: 10px; }
+        .feed-card { background: white; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid transparent; transition: transform 0.2s; text-decoration: none; color: inherit; animation: slideIn 0.4s cubic-bezier(0.16,1,0.3,1); }
+        .feed-card:hover { transform: translateX(4px); }
+        .feed-card.lost  { border-left-color: #f472b6; }
+        .feed-card.found { border-left-color: #34d399; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+
+        .feed-type-badge { font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; }
+        .feed-type-badge.lost  { background: #fce7f3; color: #db2777; }
+        .feed-type-badge.found { background: #d1fae5; color: #059669; }
+        .feed-item-name { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: #0f172a; }
+        .feed-meta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        .feed-time { margin-left: auto; font-size: 11px; color: #94a3b8; flex-shrink: 0; text-align: right; }
+        .feed-cat { background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; display: inline-block; margin-top: 3px; }
+
+        .feed-empty { text-align: center; padding: 32px; background: white; border-radius: 14px; color: #94a3b8; font-size: 14px; }
+        .feed-loading { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
 {% endblock %}
 
 {% block content %}
@@ -125,6 +151,17 @@
             <span class="action-arrow">→</span>
         </a>
     </div>
+    <!-- ── LIVE CAMPUS FEED ── -->
+    <div class="feed-section">
+        <div class="feed-header">
+            <div class="feed-title">🏫 Campus Feed</div>
+            <div class="live-dot">LIVE</div>
+        </div>
+        <div class="feed-list" id="feedList">
+            <div class="feed-loading">⏳ Loading feed...</div>
+        </div>
+    </div>
+
     <div class="footer">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
 {% endblock %}
 
@@ -136,4 +173,66 @@ fetch('/api/stats/{{ user.id }}').then(r=>r.json()).then(d=>{
     document.getElementById('foundCount').textContent = d.found ?? '—';
     document.getElementById('claimCount').textContent = d.claims ?? '—';
 }).catch(()=>{});
+
+// ── LIVE FEED ──
+let knownLostId  = 0;
+let knownFoundId = 0;
+let firstLoad    = true;
+
+function renderCard(item) {
+    const isLost = item.feed_type === 'lost';
+    const card = document.createElement('a');
+    card.className = 'feed-card ' + item.feed_type;
+    card.href = '/' + (isLost ? 'lost_item' : 'found_item') + '/' + item.id + '/{{ user.id }}';
+    card.innerHTML = `
+        <span class="feed-type-badge ${item.feed_type}">${isLost ? '📦 Lost' : '✅ Found'}</span>
+        <div style="flex:1;min-width:0;">
+            <div class="feed-item-name">${escHtml(item.item_name)}</div>
+            <div class="feed-meta">by ${escHtml(item.reporter_name)}</div>
+            <span class="feed-cat">${escHtml(item.category)}</span>
+        </div>
+        <div class="feed-time">${item.created_at}</div>
+    `;
+    return card;
+}
+
+function escHtml(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function loadFeed(isInitial) {
+    const url = `/api/live_feed?after_lost=${knownLostId}&after_found=${knownFoundId}`;
+    fetch(url).then(r => r.json()).then(items => {
+        const list = document.getElementById('feedList');
+
+        if (isInitial) {
+            list.innerHTML = '';
+            if (!items.length) {
+                list.innerHTML = '<div class="feed-empty">No items reported yet. Be the first! 🎉</div>';
+                return;
+            }
+            items.forEach(item => {
+                list.appendChild(renderCard(item));
+                if (item.feed_type === 'lost'  && item.id > knownLostId)  knownLostId  = item.id;
+                if (item.feed_type === 'found' && item.id > knownFoundId) knownFoundId = item.id;
+            });
+        } else {
+            // Only new items
+            let added = 0;
+            items.forEach(item => {
+                if (item.feed_type === 'lost'  && item.id <= knownLostId)  return;
+                if (item.feed_type === 'found' && item.id <= knownFoundId) return;
+                const card = renderCard(item);
+                list.insertBefore(card, list.firstChild);
+                if (item.feed_type === 'lost'  && item.id > knownLostId)  knownLostId  = item.id;
+                if (item.feed_type === 'found' && item.id > knownFoundId) knownFoundId = item.id;
+                added++;
+                // Keep max 15 cards
+                while (list.children.length > 15) list.removeChild(list.lastChild);
+            });
+        }
+    }).catch(() => {});
+}
+
+// Initial load then poll every 6 seconds
+loadFeed(true);
+setInterval(() => loadFeed(false), 6000);
 {% endblock %}
