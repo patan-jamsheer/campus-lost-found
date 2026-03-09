@@ -85,6 +85,10 @@
         <a href="{{ url_for('report_lost', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'report_lost' %}active{% endif %}"><span class="nav-icon">📦</span> Report Lost Item</a>
         <a href="{{ url_for('report_found', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'report_found' %}active{% endif %}"><span class="nav-icon">✅</span> Report Found Item</a>
         <a href="{{ url_for('my_claims', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'claims' %}active{% endif %}"><span class="nav-icon">🤝</span> Claims</a>
+        <a href="{{ url_for('all_conversations', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'messages' %}active{% endif %}" id="nav-messages">
+            <span class="nav-icon">💬</span> Messages
+            <span id="nav-msg-badge" style="margin-left:auto;background:#f472b6;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;display:none;"></span>
+        </a>
         <div class="nav-label">Account</div>
         <a href="{{ url_for('profile', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'profile' %}active{% endif %}"><span class="nav-icon">👤</span> My Profile</a>
         <a href="{{ url_for('settings', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'settings' %}active{% endif %}"><span class="nav-icon">⚙️</span> Settings</a>
@@ -98,6 +102,10 @@
         <a href="{{ url_for('found_items_list', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'found_items' %}active{% endif %}"><span class="nav-icon">📋</span> Browse Found Items</a>
         <a href="{{ url_for('my_claims', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'claims' %}active{% endif %}"><span class="nav-icon">🤝</span> My Claims</a>
         <a href="{{ url_for('incoming_claims', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'incoming_claims' %}active{% endif %}"><span class="nav-icon">📥</span> Incoming Claims</a>
+        <a href="{{ url_for('all_conversations', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'messages' %}active{% endif %}" id="nav-messages">
+            <span class="nav-icon">💬</span> Messages
+            <span id="nav-msg-badge" style="margin-left:auto;background:#f472b6;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;display:none;"></span>
+        </a>
         <div class="nav-label">Account</div>
         <a href="{{ url_for('settings', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'settings' %}active{% endif %}"><span class="nav-icon">⚙️</span> Settings</a>
         {% endif %}
@@ -114,6 +122,22 @@
 <script>
 function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('mobOverlay').classList.toggle('show'); }
 function closeSidebar(){ document.querySelector('.sidebar').classList.remove('open'); document.getElementById('mobOverlay').classList.remove('show'); }
+
+// ── Unread message badge polling ──
+{% if current_user %}
+(function pollUnread(){
+    fetch('/api/unread_count/{{ current_user.id }}')
+        .then(r => r.json())
+        .then(d => {
+            const badge = document.getElementById('nav-msg-badge');
+            if (badge) {
+                if (d.count > 0) { badge.textContent = d.count; badge.style.display = 'inline-block'; }
+                else { badge.style.display = 'none'; }
+            }
+        }).catch(()=>{});
+    setTimeout(pollUnread, 5000);
+})();
+{% endif %}
 {% block extra_js %}{% endblock %}
 </script>
 

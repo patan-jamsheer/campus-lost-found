@@ -1,0 +1,68 @@
+{% extends "base_sidebar.html" %}
+{% block title %}Messages — Campus Lost & Found{% endblock %}
+
+{% block extra_css %}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.page-header h1 { font-family: 'Syne', sans-serif; font-size: 26px; color: #0f172a; }
+.page-header p  { color: #64748b; font-size: 13px; margin-top: 4px; margin-bottom: 24px; }
+
+.conv-list { display: flex; flex-direction: column; gap: 10px; max-width: 680px; }
+.conv-card { background: white; border-radius: 16px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; text-decoration: none; transition: transform 0.18s, box-shadow 0.18s; cursor: pointer; }
+.conv-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.09); }
+.conv-card.unread { border-left: 3px solid #6366f1; }
+.conv-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e7ff; flex-shrink: 0; }
+.conv-body { flex: 1; min-width: 0; }
+.conv-name { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: #0f172a; }
+.conv-item { font-size: 12px; color: #6366f1; font-weight: 600; margin-top: 2px; }
+.conv-preview { font-size: 13px; color: #64748b; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv-card.unread .conv-preview { color: #0f172a; font-weight: 600; }
+.conv-meta { text-align: right; flex-shrink: 0; }
+.conv-time { font-size: 11px; color: #94a3b8; }
+.conv-badge { background: #6366f1; color: white; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 99px; margin-top: 6px; display: inline-block; }
+
+.empty-state { text-align: center; padding: 80px 20px; color: #94a3b8; }
+.empty-state .icon { font-size: 56px; margin-bottom: 14px; }
+.empty-state h3 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #cbd5e1; margin-bottom: 6px; }
+.empty-state p { font-size: 13px; }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>💬 Messages</h1>
+    <p>All your conversations about lost & found items</p>
+</div>
+
+{% if conversations %}
+<div class="conv-list">
+    {% for conv in conversations %}
+    <a href="{{ url_for('chat_page', item_type=conv.item_type, item_id=conv.item_id, user_id=me.id) }}?with={{ conv.partner.id }}"
+       class="conv-card {% if conv.unread > 0 %}unread{% endif %}">
+        <img class="conv-avatar"
+             src="{{ conv.partner.profile_pic if conv.partner.profile_pic and conv.partner.profile_pic.startswith('http') else url_for('static', filename='uploads/' + (conv.partner.profile_pic or 'default.jpeg')) }}"
+             alt="{{ conv.partner.name }}">
+        <div class="conv-body">
+            <div class="conv-name">{{ conv.partner.name }}</div>
+            <div class="conv-item">📦 {{ conv.item_name }} <span style="color:#94a3b8;font-weight:500;">({{ conv.item_type }})</span></div>
+            <div class="conv-preview">{{ conv.last_msg }}</div>
+        </div>
+        <div class="conv-meta">
+            <div class="conv-time">{{ conv.last_time }}</div>
+            {% if conv.unread > 0 %}
+            <div class="conv-badge">{{ conv.unread }}</div>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="icon">💬</div>
+    <h3>No conversations yet</h3>
+    <p>When you message someone about a lost or found item,<br>it'll show up here.</p>
+</div>
+{% endif %}
+
+<div style="text-align:center; padding:15px; background:#1a1a2e; color:#fff; font-size:14px; margin-top:30px;">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
+{% endblock %}
+
+{% block extra_js %}{% endblock %}

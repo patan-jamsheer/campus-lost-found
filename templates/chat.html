@@ -1,0 +1,190 @@
+{% extends "base_sidebar.html" %}
+{% block title %}Chat — Campus Lost & Found{% endblock %}
+
+{% block extra_css %}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.chat-wrapper { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 100px); }
+.chat-header { background: white; border-radius: 16px 16px 0 0; padding: 16px 20px; display: flex; align-items: center; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-bottom: 1px solid #f1f5f9; }
+.chat-back { color: #6366f1; text-decoration: none; font-size: 18px; font-weight: 700; flex-shrink: 0; }
+.chat-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e7ff; flex-shrink: 0; }
+.chat-partner-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; color: #0f172a; }
+.chat-item-label { font-size: 11px; color: #64748b; margin-top: 2px; }
+.chat-online { margin-left: auto; display: flex; align-items: center; gap: 5px; font-size: 12px; color: #22c55e; font-weight: 600; }
+.chat-online span { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block; }
+
+.chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #f8fafc; display: flex; flex-direction: column; gap: 12px; }
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+.msg-row { display: flex; gap: 8px; align-items: flex-end; max-width: 80%; }
+.msg-row.mine { align-self: flex-end; flex-direction: row-reverse; }
+.msg-row.theirs { align-self: flex-start; }
+.msg-pic { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.msg-bubble { padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; max-width: 100%; word-break: break-word; }
+.msg-row.mine .msg-bubble { background: linear-gradient(135deg, #6366f1, #818cf8); color: white; border-bottom-right-radius: 4px; }
+.msg-row.theirs .msg-bubble { background: white; color: #1e293b; border-bottom-left-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.msg-time { font-size: 10px; color: #94a3b8; margin-top: 4px; text-align: right; }
+.msg-row.theirs .msg-time { text-align: left; }
+
+.chat-input-area { background: white; border-radius: 0 0 16px 16px; padding: 14px 16px; display: flex; gap: 10px; align-items: center; box-shadow: 0 -2px 12px rgba(0,0,0,0.05); }
+#msg-input { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 24px; padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1e293b; outline: none; resize: none; max-height: 100px; transition: border-color 0.2s; }
+#msg-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+#send-btn { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #818cf8); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 14px rgba(99,102,241,0.4); transition: transform 0.18s; }
+#send-btn:hover { transform: scale(1.08); }
+#send-btn svg { width: 18px; height: 18px; fill: white; }
+
+.empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #94a3b8; }
+.empty-chat .icon { font-size: 48px; }
+.empty-chat p { font-size: 14px; font-weight: 500; }
+
+.item-chip { background: #ede9fe; color: #6d28d9; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 99px; margin-left: 8px; }
+
+@media (max-width: 700px) {
+    .chat-wrapper { height: calc(100vh - 80px); }
+    .msg-row { max-width: 90%; }
+}
+{% endblock %}
+
+{% block content %}
+<div class="chat-wrapper">
+    <div class="chat-header">
+        <a href="{{ url_for('all_conversations', user_id=me.id) }}" class="chat-back">←</a>
+        <img class="chat-avatar"
+             src="{{ partner.profile_pic if partner.profile_pic and partner.profile_pic.startswith('http') else url_for('static', filename='uploads/' + (partner.profile_pic or 'default.jpeg')) }}"
+             alt="{{ partner.name }}">
+        <div>
+            <div class="chat-partner-name">{{ partner.name }}</div>
+            <div class="chat-item-label">
+                Re: <strong>{{ item.item_name }}</strong>
+                <span class="item-chip">{{ item_type }} item</span>
+            </div>
+        </div>
+        <div class="chat-online"><span></span> Online</div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+        {% if not messages_list %}
+        <div class="empty-chat">
+            <div class="icon">💬</div>
+            <p>No messages yet. Say hi!</p>
+        </div>
+        {% else %}
+        {% for msg in messages_list %}
+        <div class="msg-row {% if msg.sender_id == me.id %}mine{% else %}theirs{% endif %}" data-id="{{ msg.id }}">
+            {% if msg.sender_id != me.id %}
+            <img class="msg-pic"
+                 src="{{ partner.profile_pic if partner.profile_pic and partner.profile_pic.startswith('http') else url_for('static', filename='uploads/' + (partner.profile_pic or 'default.jpeg')) }}"
+                 alt="">
+            {% endif %}
+            <div>
+                <div class="msg-bubble">{{ msg.message }}</div>
+                <div class="msg-time">{{ msg.created_at.strftime('%I:%M %p') }}</div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="chat-input-area">
+        <textarea id="msg-input" placeholder="Type a message…" rows="1" onkeydown="handleKey(event)"></textarea>
+        <button id="send-btn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+        </button>
+    </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:80px;right:24px;background:#6366f1;color:white;padding:10px 18px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(99,102,241,0.4);animation:slideUp 0.3s ease;"></div>
+
+<div style="text-align:center; padding:15px; background:#1a1a2e; color:#fff; font-size:14px; margin-top:10px;">Developed by <b>Patan Jamsheer</b> | CSE (AI-ML)</div>
+{% endblock %}
+
+{% block extra_js %}
+const ME_ID      = {{ me.id }};
+const PARTNER_ID = {{ partner.id }};
+const ITEM_ID    = {{ item.id }};
+const ITEM_TYPE  = "{{ item_type }}";
+const MY_PIC     = "{{ url_for('static', filename='uploads/' + (me.profile_pic or 'default.jpeg')) if not (me.profile_pic and me.profile_pic.startswith('http')) else me.profile_pic }}";
+
+// Auto-scroll to bottom
+function scrollBottom(){ const c = document.getElementById('chat-messages'); c.scrollTop = c.scrollHeight; }
+scrollBottom();
+
+// Get last message id
+function lastMsgId(){
+    const rows = document.querySelectorAll('.msg-row[data-id]');
+    if(!rows.length) return 0;
+    return parseInt(rows[rows.length-1].getAttribute('data-id')) || 0;
+}
+
+// Append a message bubble
+function appendMsg(msg, isMine){
+    const empty = document.querySelector('.empty-chat');
+    if(empty) empty.remove();
+
+    const container = document.getElementById('chat-messages');
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + (isMine ? 'mine' : 'theirs');
+    row.setAttribute('data-id', msg.id);
+
+    if(!isMine){
+        const pic = document.createElement('img');
+        pic.className = 'msg-pic';
+        pic.src = "{{ partner.profile_pic if partner.profile_pic and partner.profile_pic.startswith('http') else url_for('static', filename='uploads/' + (partner.profile_pic or 'default.jpeg')) }}";
+        row.appendChild(pic);
+    }
+    const inner = document.createElement('div');
+    inner.innerHTML = '<div class="msg-bubble">' + escHtml(msg.message) + '</div><div class="msg-time">' + msg.created_at + '</div>';
+    row.appendChild(inner);
+    container.appendChild(row);
+    scrollBottom();
+}
+
+function escHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Send message
+function sendMessage(){
+    const input = document.getElementById('msg-input');
+    const text  = input.value.trim();
+    if(!text) return;
+    input.value = '';
+    input.style.height = 'auto';
+
+    fetch('/api/send_message', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ receiver_id: PARTNER_ID, item_id: ITEM_ID, item_type: ITEM_TYPE, message: text })
+    }).then(r=>r.json()).then(d=>{
+        if(d.ok) appendMsg(d.message, true);
+    });
+}
+
+function handleKey(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+}
+
+// Auto-resize textarea
+document.getElementById('msg-input').addEventListener('input', function(){
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+
+// Poll for new messages every 4 seconds
+function pollNew(){
+    fetch('/api/poll_messages/' + ITEM_TYPE + '/' + ITEM_ID + '/' + ME_ID + '/' + PARTNER_ID + '/' + lastMsgId())
+    .then(r=>r.json()).then(msgs=>{
+        msgs.forEach(m => {
+            if(m.sender_id !== ME_ID){ appendMsg(m, false); showToast('💬 New message from ' + m.sender_name); }
+        });
+    }).catch(()=>{});
+    setTimeout(pollNew, 4000);
+}
+pollNew();
+
+// Toast
+function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(()=>{ t.style.display='none'; }, 3000);
+}
+{% endblock %}

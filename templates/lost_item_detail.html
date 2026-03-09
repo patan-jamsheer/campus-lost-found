@@ -251,6 +251,12 @@
                                 <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
                                 Send Email
                             </a>
+                            {% if user.id != item.user_id %}
+                            <a href="{{ url_for('chat_page', item_type='lost', item_id=item.id, user_id=user.id) }}"
+                               style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:linear-gradient(135deg,#6366f1,#818cf8);color:white;border-radius:14px;text-decoration:none;font-size:14px;font-weight:700;margin-bottom:10px;box-shadow:0 4px 16px rgba(99,102,241,0.35);transition:transform 0.18s;">
+                                💬 Message in App
+                            </a>
+                            {% endif %}
                             <p class="btn-note">🔒 Contact info visible to campus members only</p>
 
                             {% if user.id == item.user_id or user.role == 'Admin' %}
