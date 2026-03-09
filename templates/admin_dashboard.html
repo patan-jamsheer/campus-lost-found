@@ -140,6 +140,32 @@
 
         
     /* ── MOBILE RESPONSIVE ── */
+    @media (max-width: 700px) {
+        /* Stat cards — 2 columns on mobile */
+        .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+        .stat-card { padding: 14px !important; gap: 10px !important; }
+        .stat-num { font-size: 22px !important; }
+        .stat-icon { width: 40px !important; height: 40px !important; font-size: 16px !important; border-radius: 10px !important; }
+
+        /* Charts — 1 column on mobile */
+        .charts-grid, .charts-grid-3 { grid-template-columns: 1fr !important; gap: 14px !important; }
+        .chart-card.full { grid-column: 1 !important; }
+        .chart-card { padding: 16px !important; }
+        .chart-label { font-size: 13px !important; }
+        .chart-wrap canvas { max-height: 200px !important; }
+
+        /* Resolution hero — stack vertically */
+        .resolution-hero { flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: 12px !important; }
+        .resolution-num { font-size: 52px !important; }
+        .resolution-ring { width: 80px !important; height: 80px !important; align-self: flex-end !important; }
+
+        /* Analytics title */
+        .analytics-title { font-size: 17px !important; }
+
+        /* Top users bar */
+        .top-user-bar-wrap { flex: 1.5 !important; }
+        .top-user-name { font-size: 12px !important; }
+    }
 {% endblock %}
 
 {% block content %}
