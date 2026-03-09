@@ -715,9 +715,9 @@ If truly zero matches, return []"""
     # Sort by score descending
     matches.sort(key=lambda x: x["score"], reverse=True)
 
-    # ── AUTO EMAIL ALERT: notify owner + finder for strong matches (score >= 70) ──
+    # ── AUTO EMAIL ALERT: notify owner + finder for strong matches (score >= 85) ──
     if matches and NOTIFICATIONS_ENABLED and lost:
-        strong = [m for m in matches if m.get("score", 0) >= 70]
+        strong = [m for m in matches if m.get("score", 0) >= 85]
         if strong:
             try:
                 # Get reporter (owner) email
