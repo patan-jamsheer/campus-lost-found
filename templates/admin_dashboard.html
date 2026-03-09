@@ -474,137 +474,94 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>
-// ── DATA FROM FLASK ──
-const lostByCat     = {{ analytics.lost_by_cat | tojson }};
-const foundByCat    = {{ analytics.found_by_cat | tojson }};
-const claimsStatus  = {{ analytics.claims_status | tojson }};
-const actLabels     = {{ analytics.activity_labels | tojson }};
-const lostActivity  = {{ analytics.lost_activity | tojson }};
-const foundActivity = {{ analytics.found_activity | tojson }};
-const resRate       = {{ analytics.resolution_rate }};
+// ── Dynamically load Chart.js then init analytics ──
+(function(){
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    s.onload = initAnalytics;
+    document.head.appendChild(s);
+})();
 
-// ── PALETTE ──
-const COLORS = ['#6366f1','#38bdf8','#f472b6','#fb923c','#34d399','#a78bfa','#facc15','#f87171'];
-Chart.defaults.font.family = "'DM Sans', sans-serif";
+function initAnalytics(){
+    const lostByCat     = {{ analytics.lost_by_cat | tojson }};
+    const foundByCat    = {{ analytics.found_by_cat | tojson }};
+    const claimsStatus  = {{ analytics.claims_status | tojson }};
+    const actLabels     = {{ analytics.activity_labels | tojson }};
+    const lostActivity  = {{ analytics.lost_activity | tojson }};
+    const foundActivity = {{ analytics.found_activity | tojson }};
+    const resRate       = {{ analytics.resolution_rate }};
 
-// ── 1. RESOLUTION RING ──
-new Chart(document.getElementById('resolutionRing'), {
-    type: 'doughnut',
-    data: {
-        datasets: [{
-            data: [resRate, 100 - resRate],
-            backgroundColor: ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.15)'],
-            borderWidth: 0,
-            cutout: '78%'
-        }]
-    },
-    options: {
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        animation: { animateRotate: true, duration: 1200 }
-    }
-});
+    const COLORS = ['#6366f1','#38bdf8','#f472b6','#fb923c','#34d399','#a78bfa','#facc15','#f87171'];
+    Chart.defaults.font.family = "'DM Sans', sans-serif";
 
-// ── 2. ACTIVITY LINE CHART ──
-new Chart(document.getElementById('activityChart'), {
-    type: 'line',
-    data: {
-        labels: actLabels,
-        datasets: [
-            {
-                label: 'Lost Reports',
-                data: lostActivity,
-                borderColor: '#f472b6',
-                backgroundColor: 'rgba(244,114,182,0.08)',
-                borderWidth: 2.5,
-                pointBackgroundColor: '#f472b6',
-                pointRadius: 5,
-                tension: 0.4,
-                fill: true
-            },
-            {
-                label: 'Found Reports',
-                data: foundActivity,
-                borderColor: '#34d399',
-                backgroundColor: 'rgba(52,211,153,0.08)',
-                borderWidth: 2.5,
-                pointBackgroundColor: '#34d399',
-                pointRadius: 5,
-                tension: 0.4,
-                fill: true
+    // 1. Resolution Ring
+    new Chart(document.getElementById('resolutionRing'), {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [resRate, 100 - resRate],
+                backgroundColor: ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.15)'],
+                borderWidth: 0, cutout: '78%'
+            }]
+        },
+        options: { plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { animateRotate: true, duration: 1200 } }
+    });
+
+    // 2. Activity Line
+    new Chart(document.getElementById('activityChart'), {
+        type: 'line',
+        data: {
+            labels: actLabels,
+            datasets: [
+                { label: 'Lost Reports', data: lostActivity, borderColor: '#f472b6', backgroundColor: 'rgba(244,114,182,0.08)', borderWidth: 2.5, pointBackgroundColor: '#f472b6', pointRadius: 5, tension: 0.4, fill: true },
+                { label: 'Found Reports', data: foundActivity, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.08)', borderWidth: 2.5, pointBackgroundColor: '#34d399', pointRadius: 5, tension: 0.4, fill: true }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { size: 12 } } } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                x: { ticks: { font: { size: 11 } }, grid: { display: false } }
             }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { size: 12 } } } },
-        scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
-            x: { ticks: { font: { size: 11 } }, grid: { display: false } }
         }
-    }
-});
+    });
 
-// ── 3. LOST BY CATEGORY DOUGHNUT ──
-new Chart(document.getElementById('lostCatChart'), {
-    type: 'doughnut',
-    data: {
-        labels: lostByCat.map(r => r.category || 'Other'),
-        datasets: [{ data: lostByCat.map(r => r.cnt), backgroundColor: COLORS, borderWidth: 0, hoverOffset: 8 }]
-    },
-    options: {
-        responsive: true,
-        cutout: '65%',
-        plugins: {
-            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } }
-        }
-    }
-});
+    // 3. Lost by Category Doughnut
+    new Chart(document.getElementById('lostCatChart'), {
+        type: 'doughnut',
+        data: {
+            labels: lostByCat.map(r => r.category || 'Other'),
+            datasets: [{ data: lostByCat.map(r => r.cnt), backgroundColor: COLORS, borderWidth: 0, hoverOffset: 8 }]
+        },
+        options: { responsive: true, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } } } }
+    });
 
-// ── 4. FOUND BY CATEGORY BAR ──
-new Chart(document.getElementById('foundCatChart'), {
-    type: 'bar',
-    data: {
-        labels: foundByCat.map(r => r.category || 'Other'),
-        datasets: [{
-            label: 'Found',
-            data: foundByCat.map(r => r.cnt),
-            backgroundColor: COLORS.map(c => c + 'cc'),
-            borderRadius: 8,
-            borderSkipped: false
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
-            x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+    // 4. Found by Category Bar
+    new Chart(document.getElementById('foundCatChart'), {
+        type: 'bar',
+        data: {
+            labels: foundByCat.map(r => r.category || 'Other'),
+            datasets: [{ label: 'Found', data: foundByCat.map(r => r.cnt), backgroundColor: COLORS.map(c => c + 'cc'), borderRadius: 8, borderSkipped: false }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+            }
         }
-    }
-});
+    });
 
-// ── 5. CLAIMS STATUS PIE ──
-const claimLabels = ['Pending', 'Approved', 'Rejected'];
-const claimColors = ['#facc15', '#34d399', '#f87171'];
-new Chart(document.getElementById('claimsChart'), {
-    type: 'pie',
-    data: {
-        labels: claimLabels,
-        datasets: [{
-            data: [claimsStatus['Pending'] || 0, claimsStatus['Approved'] || 0, claimsStatus['Rejected'] || 0],
-            backgroundColor: claimColors,
-            borderWidth: 0,
-            hoverOffset: 8
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 12 } } }
-        }
-    }
-});
-</script>
+    // 5. Claims Pie
+    new Chart(document.getElementById('claimsChart'), {
+        type: 'pie',
+        data: {
+            labels: ['Pending', 'Approved', 'Rejected'],
+            datasets: [{ data: [claimsStatus['Pending']||0, claimsStatus['Approved']||0, claimsStatus['Rejected']||0], backgroundColor: ['#facc15','#34d399','#f87171'], borderWidth: 0, hoverOffset: 8 }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 12 } } } } }
+    });
+}
 {% endblock %}
