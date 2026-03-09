@@ -89,6 +89,7 @@
             <span class="nav-icon">💬</span> Messages
             <span id="nav-msg-badge" style="margin-left:auto;background:#f472b6;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;display:none;"></span>
         </a>
+        <a href="{{ url_for('success_stories', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'success_stories' %}active{% endif %}"><span class="nav-icon">🎉</span> Success Stories</a>
         <div class="nav-label">Account</div>
         <a href="{{ url_for('profile', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'profile' %}active{% endif %}"><span class="nav-icon">👤</span> My Profile</a>
         <a href="{{ url_for('settings', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'settings' %}active{% endif %}"><span class="nav-icon">⚙️</span> Settings</a>
@@ -106,6 +107,7 @@
             <span class="nav-icon">💬</span> Messages
             <span id="nav-msg-badge" style="margin-left:auto;background:#f472b6;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;display:none;"></span>
         </a>
+        <a href="{{ url_for('success_stories', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'success_stories' %}active{% endif %}"><span class="nav-icon">🎉</span> Success Stories</a>
         <div class="nav-label">Account</div>
         <a href="{{ url_for('settings', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'settings' %}active{% endif %}"><span class="nav-icon">⚙️</span> Settings</a>
         {% endif %}
