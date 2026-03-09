@@ -1120,6 +1120,57 @@ def admin_dashboard(admin_id):
         JOIN users u ON fi.user_id = u.id ORDER BY fi.created_at DESC LIMIT 10
     """)
     found_items = cursor.fetchall()
+
+    # ── ANALYTICS QUERIES ──
+    # Lost items by category
+    cursor.execute("SELECT category, COUNT(*) as cnt FROM lost_items GROUP BY category ORDER BY cnt DESC")
+    lost_by_cat = cursor.fetchall()
+
+    # Found items by category
+    cursor.execute("SELECT category, COUNT(*) as cnt FROM found_items GROUP BY category ORDER BY cnt DESC")
+    found_by_cat = cursor.fetchall()
+
+    # Claims status breakdown
+    cursor.execute("SELECT status, COUNT(*) as cnt FROM claim_requests GROUP BY status")
+    claims_status = {r['status']: r['cnt'] for r in cursor.fetchall()}
+
+    # Activity last 7 days
+    cursor.execute("""
+        SELECT DATE(created_at) as day, COUNT(*) as cnt
+        FROM lost_items
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY DATE(created_at) ORDER BY day ASC
+    """)
+    lost_activity_raw = {str(r['day']): r['cnt'] for r in cursor.fetchall()}
+
+    cursor.execute("""
+        SELECT DATE(created_at) as day, COUNT(*) as cnt
+        FROM found_items
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY DATE(created_at) ORDER BY day ASC
+    """)
+    found_activity_raw = {str(r['day']): r['cnt'] for r in cursor.fetchall()}
+
+    # Build last 7 days labels
+    from datetime import date, timedelta
+    activity_labels = [(date.today() - timedelta(days=i)).strftime('%d %b') for i in range(6, -1, -1)]
+    activity_keys   = [(date.today() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(6, -1, -1)]
+    lost_activity   = [lost_activity_raw.get(k, 0) for k in activity_keys]
+    found_activity  = [found_activity_raw.get(k, 0) for k in activity_keys]
+
+    # Resolution rate
+    cursor.execute("SELECT COUNT(*) as n FROM lost_items WHERE status = 'Found'")
+    resolved = cursor.fetchone()['n']
+    resolution_rate = round((resolved / total_lost * 100) if total_lost > 0 else 0)
+
+    # Top 5 active users
+    cursor.execute("""
+        SELECT u.name, COUNT(*) as cnt
+        FROM lost_items li JOIN users u ON li.user_id = u.id
+        GROUP BY u.id, u.name ORDER BY cnt DESC LIMIT 5
+    """)
+    top_users = cursor.fetchall()
+
     cursor.close(); conn.close()
 
     return render_template("admin_dashboard.html",
@@ -1127,8 +1178,20 @@ def admin_dashboard(admin_id):
         notifications_on=NOTIFICATIONS_ENABLED,
         stats={"users": total_users, "lost": total_lost,
                "found": total_found, "pending_claims": pending_claims},
-        claims=claims, lost_items=lost_items, found_items=found_items
-    , current_user=g.current_user)
+        claims=claims, lost_items=lost_items, found_items=found_items,
+        analytics={
+            "lost_by_cat":      lost_by_cat,
+            "found_by_cat":     found_by_cat,
+            "claims_status":    claims_status,
+            "activity_labels":  activity_labels,
+            "lost_activity":    lost_activity,
+            "found_activity":   found_activity,
+            "resolution_rate":  resolution_rate,
+            "top_users":        top_users,
+            "resolved":         resolved,
+        },
+        current_user=g.current_user
+    )
 
 @app.route("/admin/claim/<int:claim_id>/<action>/<int:admin_id>")
 @admin_required
