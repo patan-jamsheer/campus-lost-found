@@ -98,6 +98,28 @@
         
         /* ── ANALYTICS ── */
         .analytics-section { margin-bottom: 36px; }
+
+        /* ── EXPIRY WARNING PANEL ── */
+        .expiry-panel { background: white; border-radius: 18px; border: 1px solid #f1f5f9; box-shadow: 0 4px 16px rgba(0,0,0,0.06); padding: 24px 28px; margin-bottom: 28px; }
+        .expiry-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .expiry-sub { font-size: 12px; color: #94a3b8; margin-bottom: 20px; }
+        .expiry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .expiry-col-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+        .expiry-col-title.lost-col { color: #f97316; }
+        .expiry-col-title.found-col { color: #6366f1; }
+        .expiry-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; }
+        .expiry-row.tier-warn  { background: #fef9c3; border: 1px solid #fde68a; }
+        .expiry-row.tier-alert { background: #ffedd5; border: 1px solid #fed7aa; }
+        .expiry-row.tier-crit  { background: #fee2e2; border: 1px solid #fecaca; }
+        .expiry-row-label { font-size: 13px; font-weight: 600; }
+        .tier-warn  .expiry-row-label { color: #92400e; }
+        .tier-alert .expiry-row-label { color: #c2410c; }
+        .tier-crit  .expiry-row-label { color: #b91c1c; }
+        .expiry-count { font-size: 20px; font-weight: 800; }
+        .tier-warn  .expiry-count { color: #d97706; }
+        .tier-alert .expiry-count { color: #ea580c; }
+        .tier-crit  .expiry-count { color: #dc2626; }
+        .expiry-zero { opacity: 0.35; }
         .analytics-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
         .analytics-sub { font-size: 13px; color: #64748b; margin-bottom: 22px; }
 
@@ -222,6 +244,54 @@
         <div class="stat-card">
             <div class="stat-icon yellow">⏳</div>
             <div><div class="stat-num">{{ stats.pending_claims }}</div><div class="stat-label">Pending Claims</div></div>
+        </div>
+    </div>
+
+    <!-- ── EXPIRY WARNING PANEL ── -->
+    {% set total_expiring = expiry.lost_7 + expiry.lost_15 + expiry.lost_30 + expiry.found_7 + expiry.found_15 + expiry.found_30 %}
+    <div class="expiry-panel">
+        <div class="expiry-title">
+            ⚠️ Unresolved Items Tracker
+            {% if total_expiring > 0 %}
+            <span style="margin-left:auto;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">{{ total_expiring }} need attention</span>
+            {% else %}
+            <span style="margin-left:auto;background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">✅ All clear</span>
+            {% endif %}
+        </div>
+        <div class="expiry-sub">Cases still open past their expected resolution time</div>
+        <div class="expiry-grid">
+            <!-- LOST ITEMS -->
+            <div>
+                <div class="expiry-col-title lost-col">📦 Lost Items (Searching)</div>
+                <div class="expiry-row tier-warn {% if expiry.lost_7 == 0 %}expiry-zero{% endif %}">
+                    <span class="expiry-row-label">🟡 7–14 days old</span>
+                    <span class="expiry-count">{{ expiry.lost_7 }}</span>
+                </div>
+                <div class="expiry-row tier-alert {% if expiry.lost_15 == 0 %}expiry-zero{% endif %}">
+                    <span class="expiry-row-label">🟠 15–29 days old</span>
+                    <span class="expiry-count">{{ expiry.lost_15 }}</span>
+                </div>
+                <div class="expiry-row tier-crit {% if expiry.lost_30 == 0 %}expiry-zero{% endif %}">
+                    <span class="expiry-row-label">🔴 30+ days old</span>
+                    <span class="expiry-count">{{ expiry.lost_30 }}</span>
+                </div>
+            </div>
+            <!-- FOUND ITEMS -->
+            <div>
+                <div class="expiry-col-title found-col">📋 Found Items (Unclaimed)</div>
+                <div class="expiry-row tier-warn {% if expiry.found_7 == 0 %}expiry-zero{% endif %}">
+                    <span class="expiry-row-label">🟡 7–14 days old</span>
+                    <span class="expiry-count">{{ expiry.found_7 }}</span>
+                </div>
+                <div class="expiry-row tier-alert {% if expiry.found_15 == 0 %}expiry-zero{% endif %}">
+                    <span class="expiry-row-label">🟠 15–29 days old</span>
+                    <span class="expiry-count">{{ expiry.found_15 }}</span>
+                </div>
+                <div class="expiry-row tier-crit {% if expiry.found_30 == 0 %}expiry-zero{% endif %}">
+                    <span class="expiry-row-label">🔴 30+ days old</span>
+                    <span class="expiry-count">{{ expiry.found_30 }}</span>
+                </div>
+            </div>
         </div>
     </div>
 

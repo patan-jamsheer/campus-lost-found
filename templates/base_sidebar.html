@@ -8,7 +8,50 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root { --bg: #080c14; --surface: #0f1623; --border: rgba(255,255,255,0.06); --accent: #38bdf8; --accent2: #818cf8; --text: #e2e8f0; --muted: #64748b; --sidebar-w: 270px; }
-        body { font-family: 'DM Sans', sans-serif; background: #f1f5f9; min-height: 100vh; }
+
+        /* ── DARK MODE ── */
+        body.dark-mode { --main-bg: #0f172a; --main-surface: #1e293b; --main-text: #e2e8f0; --main-border: #334155; --main-muted: #94a3b8; }
+        body { font-family: 'DM Sans', sans-serif; background: #f1f5f9; min-height: 100vh; transition: background 0.3s; }
+        body.dark-mode { background: var(--main-bg) !important; color: var(--main-text) !important; }
+        body.dark-mode .main { background: var(--main-bg); }
+        /* Cards & Sections */
+        body.dark-mode .detail-card,
+        body.dark-mode .section,
+        body.dark-mode .contact-card,
+        body.dark-mode .reporter-card,
+        body.dark-mode .stat-card,
+        body.dark-mode .analytics-section > div,
+        body.dark-mode .claim-section { background: var(--main-surface) !important; border-color: var(--main-border) !important; color: var(--main-text) !important; }
+        body.dark-mode .section-head,
+        body.dark-mode .section-head h2 { color: var(--main-text) !important; border-color: var(--main-border) !important; }
+        body.dark-mode .desc-text,
+        body.dark-mode .info-val,
+        body.dark-mode .info-value,
+        body.dark-mode .stat-num,
+        body.dark-mode .stat-label,
+        body.dark-mode .contact-name,
+        body.dark-mode .detail-title { color: var(--main-text) !important; }
+        body.dark-mode .info-label,
+        body.dark-mode .section-head span,
+        body.dark-mode .card-section-head { color: var(--main-muted) !important; }
+        body.dark-mode table { background: var(--main-surface); color: var(--main-text); }
+        body.dark-mode th { background: #1e293b !important; color: var(--main-muted) !important; border-color: var(--main-border) !important; }
+        body.dark-mode td { border-color: var(--main-border) !important; color: var(--main-text) !important; }
+        body.dark-mode tr:hover td { background: rgba(255,255,255,0.03) !important; }
+        body.dark-mode .contact-info-row,
+        body.dark-mode .contact-row,
+        body.dark-mode .info-item { background: rgba(255,255,255,0.04) !important; border-color: var(--main-border) !important; }
+        body.dark-mode .divider { border-color: var(--main-border) !important; }
+        body.dark-mode .expiry-panel { background: #1e293b !important; border-color: #334155 !important; }
+
+        /* Dark mode toggle button */
+        .dark-toggle { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; margin: 0 12px 10px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: background 0.2s; }
+        .dark-toggle:hover { background: rgba(255,255,255,0.08); }
+        .dark-toggle-label { font-size: 13px; color: #94a3b8; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .toggle-switch { width: 36px; height: 20px; background: #334155; border-radius: 20px; position: relative; transition: background 0.25s; flex-shrink: 0; }
+        .toggle-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: white; transition: transform 0.25s; }
+        .toggle-on { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+        .toggle-on::after { transform: translateX(16px); }
 
         /* ── SIDEBAR ── */
         .sidebar { position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh; background: var(--bg); display: flex; flex-direction: column; overflow: hidden; z-index: 10; }
@@ -89,7 +132,6 @@
             <span class="nav-icon">💬</span> Messages
             <span id="nav-msg-badge" style="margin-left:auto;background:#f472b6;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;display:none;"></span>
         </a>
-        <a href="{{ url_for('success_stories', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'success_stories' %}active{% endif %}"><span class="nav-icon">🎉</span> Success Stories</a>
         <div class="nav-label">Account</div>
         <a href="{{ url_for('profile', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'profile' %}active{% endif %}"><span class="nav-icon">👤</span> My Profile</a>
         <a href="{{ url_for('settings', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'settings' %}active{% endif %}"><span class="nav-icon">⚙️</span> Settings</a>
@@ -107,13 +149,16 @@
             <span class="nav-icon">💬</span> Messages
             <span id="nav-msg-badge" style="margin-left:auto;background:#f472b6;color:white;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;display:none;"></span>
         </a>
-        <a href="{{ url_for('success_stories', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'success_stories' %}active{% endif %}"><span class="nav-icon">🎉</span> Success Stories</a>
         <div class="nav-label">Account</div>
         <a href="{{ url_for('settings', user_id=current_user.id) if current_user else "#" }}" class="nav-item {% if active_page == 'settings' %}active{% endif %}"><span class="nav-icon">⚙️</span> Settings</a>
         {% endif %}
     </nav>
 
     <a href="{{ url_for('edit_profile', user_id=current_user.id) if current_user else "#" }}" class="edit-cta">✏️ Edit Profile</a>
+    <div class="dark-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+        <span class="dark-toggle-label"><span id="dm-icon">🌙</span> Dark Mode</span>
+        <div class="toggle-switch" id="dm-switch"></div>
+    </div>
     <a href="/logout" class="logout"><span class="nav-icon">🚪</span> Logout</a>
 </div>
 
@@ -124,6 +169,22 @@
 <script>
 function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('mobOverlay').classList.toggle('show'); }
 function closeSidebar(){ document.querySelector('.sidebar').classList.remove('open'); document.getElementById('mobOverlay').classList.remove('show'); }
+
+// ── DARK MODE ──
+function applyDarkMode(on) {
+    document.body.classList.toggle('dark-mode', on);
+    var sw = document.getElementById('dm-switch');
+    var ic = document.getElementById('dm-icon');
+    if (sw) { sw.classList.toggle('toggle-on', on); }
+    if (ic) { ic.textContent = on ? '☀️' : '🌙'; }
+}
+function toggleDarkMode() {
+    var on = !document.body.classList.contains('dark-mode');
+    localStorage.setItem('darkMode', on ? '1' : '0');
+    applyDarkMode(on);
+}
+// Apply on load
+applyDarkMode(localStorage.getItem('darkMode') === '1');
 
 // ── Unread message badge polling ──
 {% if current_user %}
