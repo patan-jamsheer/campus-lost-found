@@ -96,6 +96,43 @@
         
 
         
+        /* ── ANALYTICS ── */
+        .analytics-section { margin-bottom: 36px; }
+        .analytics-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+        .analytics-sub { font-size: 13px; color: #64748b; margin-bottom: 22px; }
+
+        /* Resolution Rate Hero */
+        .resolution-hero { background: linear-gradient(135deg, #6366f1 0%, #38bdf8 100%); border-radius: 20px; padding: 28px 32px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; box-shadow: 0 8px 32px rgba(99,102,241,0.25); flex-wrap: wrap; gap: 16px; }
+        .resolution-left h3 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 4px; }
+        .resolution-left p { font-size: 13px; color: rgba(255,255,255,0.6); }
+        .resolution-num { font-family: 'Syne', sans-serif; font-size: 72px; font-weight: 800; color: white; line-height: 1; }
+        .resolution-num span { font-size: 32px; }
+        .resolution-ring { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+        .resolution-ring canvas { width: 110px !important; height: 110px !important; }
+
+        /* Chart grid */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .charts-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .chart-card { background: white; border-radius: 16px; padding: 22px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #f1f5f9; }
+        .chart-card.full { grid-column: 1 / -1; }
+        .chart-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+        .chart-desc { font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+        .chart-wrap { position: relative; }
+        .chart-wrap canvas { max-height: 220px; }
+
+        /* Top Users */
+        .top-user-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        .top-user-row:last-child { border-bottom: none; }
+        .top-rank { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+        .rank-1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white; }
+        .rank-2 { background: linear-gradient(135deg, #94a3b8, #64748b); color: white; }
+        .rank-3 { background: linear-gradient(135deg, #cd7c3c, #b45309); color: white; }
+        .rank-other { background: #f1f5f9; color: #64748b; }
+        .top-user-name { flex: 1; font-size: 13px; font-weight: 600; color: #0f172a; }
+        .top-user-bar-wrap { flex: 2; background: #f1f5f9; border-radius: 99px; height: 6px; overflow: hidden; }
+        .top-user-bar { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #6366f1, #38bdf8); }
+        .top-user-cnt { font-size: 12px; font-weight: 700; color: #6366f1; min-width: 24px; text-align: right; }
+
         /* =============================================
            MOBILE RESPONSIVE - DO NOT REMOVE
         ============================================= */
@@ -161,6 +198,76 @@
             <div><div class="stat-num">{{ stats.pending_claims }}</div><div class="stat-label">Pending Claims</div></div>
         </div>
     </div>
+
+    <!-- ── ANALYTICS SECTION ── -->
+    <div class="analytics-section">
+        <div class="analytics-title">📊 Platform Analytics</div>
+        <div class="analytics-sub">Live insights from your campus lost & found data</div>
+
+        <!-- Resolution Rate Hero -->
+        <div class="resolution-hero">
+            <div class="resolution-left">
+                <h3>🎯 Item Recovery Rate</h3>
+                <p>{{ analytics.resolved }} out of {{ stats.lost }} lost items successfully recovered</p>
+            </div>
+            <div class="resolution-num">{{ analytics.resolution_rate }}<span>%</span></div>
+            <div class="resolution-ring">
+                <canvas id="resolutionRing"></canvas>
+            </div>
+        </div>
+
+        <!-- Row 1: Activity Line + Claims Doughnut -->
+        <div class="charts-grid">
+            <div class="chart-card full">
+                <div class="chart-label">📈 Activity — Last 7 Days</div>
+                <div class="chart-desc">Daily lost vs found reports across campus</div>
+                <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Row 2: Lost by Category + Found by Category -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-label">📦 Lost Items by Category</div>
+                <div class="chart-desc">Which items go missing most often</div>
+                <div class="chart-wrap"><canvas id="lostCatChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-label">✅ Found Items by Category</div>
+                <div class="chart-desc">Categories being returned most</div>
+                <div class="chart-wrap"><canvas id="foundCatChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Row 3: Claims Status + Top Users -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-label">🤝 Claims Breakdown</div>
+                <div class="chart-desc">Pending, approved & rejected claim requests</div>
+                <div class="chart-wrap"><canvas id="claimsChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-label">🏆 Most Active Users</div>
+                <div class="chart-desc">Top reporters helping the community</div>
+                {% if analytics.top_users %}
+                    {% set max_cnt = analytics.top_users[0].cnt %}
+                    {% for u in analytics.top_users %}
+                    <div class="top-user-row">
+                        <div class="top-rank {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-other{% endif %}">{{ loop.index }}</div>
+                        <div class="top-user-name">{{ u.name }}</div>
+                        <div class="top-user-bar-wrap">
+                            <div class="top-user-bar" style="width:{{ ((u.cnt / max_cnt) * 100)|int }}%"></div>
+                        </div>
+                        <div class="top-user-cnt">{{ u.cnt }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align:center; padding:30px; color:#94a3b8; font-size:13px;">No data yet</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <!-- ── END ANALYTICS ── -->
 
     <!-- QUICK LINKS -->
     <div class="quick-links">
@@ -367,5 +474,137 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ── DATA FROM FLASK ──
+const lostByCat     = {{ analytics.lost_by_cat | tojson }};
+const foundByCat    = {{ analytics.found_by_cat | tojson }};
+const claimsStatus  = {{ analytics.claims_status | tojson }};
+const actLabels     = {{ analytics.activity_labels | tojson }};
+const lostActivity  = {{ analytics.lost_activity | tojson }};
+const foundActivity = {{ analytics.found_activity | tojson }};
+const resRate       = {{ analytics.resolution_rate }};
 
+// ── PALETTE ──
+const COLORS = ['#6366f1','#38bdf8','#f472b6','#fb923c','#34d399','#a78bfa','#facc15','#f87171'];
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+// ── 1. RESOLUTION RING ──
+new Chart(document.getElementById('resolutionRing'), {
+    type: 'doughnut',
+    data: {
+        datasets: [{
+            data: [resRate, 100 - resRate],
+            backgroundColor: ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.15)'],
+            borderWidth: 0,
+            cutout: '78%'
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        animation: { animateRotate: true, duration: 1200 }
+    }
+});
+
+// ── 2. ACTIVITY LINE CHART ──
+new Chart(document.getElementById('activityChart'), {
+    type: 'line',
+    data: {
+        labels: actLabels,
+        datasets: [
+            {
+                label: 'Lost Reports',
+                data: lostActivity,
+                borderColor: '#f472b6',
+                backgroundColor: 'rgba(244,114,182,0.08)',
+                borderWidth: 2.5,
+                pointBackgroundColor: '#f472b6',
+                pointRadius: 5,
+                tension: 0.4,
+                fill: true
+            },
+            {
+                label: 'Found Reports',
+                data: foundActivity,
+                borderColor: '#34d399',
+                backgroundColor: 'rgba(52,211,153,0.08)',
+                borderWidth: 2.5,
+                pointBackgroundColor: '#34d399',
+                pointRadius: 5,
+                tension: 0.4,
+                fill: true
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 20, font: { size: 12 } } } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+        }
+    }
+});
+
+// ── 3. LOST BY CATEGORY DOUGHNUT ──
+new Chart(document.getElementById('lostCatChart'), {
+    type: 'doughnut',
+    data: {
+        labels: lostByCat.map(r => r.category || 'Other'),
+        datasets: [{ data: lostByCat.map(r => r.cnt), backgroundColor: COLORS, borderWidth: 0, hoverOffset: 8 }]
+    },
+    options: {
+        responsive: true,
+        cutout: '65%',
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } }
+        }
+    }
+});
+
+// ── 4. FOUND BY CATEGORY BAR ──
+new Chart(document.getElementById('foundCatChart'), {
+    type: 'bar',
+    data: {
+        labels: foundByCat.map(r => r.category || 'Other'),
+        datasets: [{
+            label: 'Found',
+            data: foundByCat.map(r => r.cnt),
+            backgroundColor: COLORS.map(c => c + 'cc'),
+            borderRadius: 8,
+            borderSkipped: false
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+        }
+    }
+});
+
+// ── 5. CLAIMS STATUS PIE ──
+const claimLabels = ['Pending', 'Approved', 'Rejected'];
+const claimColors = ['#facc15', '#34d399', '#f87171'];
+new Chart(document.getElementById('claimsChart'), {
+    type: 'pie',
+    data: {
+        labels: claimLabels,
+        datasets: [{
+            data: [claimsStatus['Pending'] || 0, claimsStatus['Approved'] || 0, claimsStatus['Rejected'] || 0],
+            backgroundColor: claimColors,
+            borderWidth: 0,
+            hoverOffset: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 12 } } }
+        }
+    }
+});
+</script>
 {% endblock %}
