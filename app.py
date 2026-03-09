@@ -1208,6 +1208,29 @@ def admin_dashboard(admin_id):
     cursor.execute("""SELECT u.name, COUNT(*) as cnt FROM lost_items li
         JOIN users u ON li.user_id = u.id GROUP BY u.id, u.name ORDER BY cnt DESC LIMIT 5""")
     top_users = cursor.fetchall()
+
+    # ── EXPIRY WARNINGS ──
+    cursor.execute("""
+        SELECT
+            SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(created_at)) BETWEEN 7  AND 14 THEN 1 ELSE 0 END) AS w7,
+            SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(created_at)) BETWEEN 15 AND 29 THEN 1 ELSE 0 END) AS w15,
+            SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(created_at)) >= 30            THEN 1 ELSE 0 END) AS w30
+        FROM lost_items WHERE status = 'Searching'
+    """)
+    le = cursor.fetchone()
+    cursor.execute("""
+        SELECT
+            SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(created_at)) BETWEEN 7  AND 14 THEN 1 ELSE 0 END) AS w7,
+            SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(created_at)) BETWEEN 15 AND 29 THEN 1 ELSE 0 END) AS w15,
+            SUM(CASE WHEN DATEDIFF(CURDATE(), DATE(created_at)) >= 30            THEN 1 ELSE 0 END) AS w30
+        FROM found_items WHERE status = 'Available'
+    """)
+    fe = cursor.fetchone()
+    expiry = {
+        'lost_7':  int(le['w7']  or 0), 'lost_15': int(le['w15'] or 0), 'lost_30': int(le['w30'] or 0),
+        'found_7': int(fe['w7']  or 0), 'found_15': int(fe['w15'] or 0), 'found_30': int(fe['w30'] or 0),
+    }
+
     cursor.close(); conn.close()
 
     return render_template("admin_dashboard.html",
@@ -1216,6 +1239,7 @@ def admin_dashboard(admin_id):
         stats={"users": total_users, "lost": total_lost,
                "found": total_found, "pending_claims": pending_claims},
         claims=claims, lost_items=lost_items, found_items=found_items,
+        expiry=expiry,
         analytics={
             "lost_by_cat": lost_by_cat, "found_by_cat": found_by_cat,
             "claims_status": claims_status, "activity_labels": activity_labels,
