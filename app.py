@@ -31,7 +31,7 @@ cloudinary.config(
     api_secret = os.environ.get("CLOUDINARY_API_SECRET")
 )
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp", "avif", "heic", "heif"}
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -42,14 +42,19 @@ def upload_to_cloudinary(file, folder):
         print(f"❌ Blocked upload: invalid file type '{file.filename}'", flush=True)
         return None
     try:
+        print(f"[Cloudinary] Uploading '{file.filename}' to folder '{folder}'...", flush=True)
+        file.seek(0)  # ensure stream is at start
         result = cloudinary.uploader.upload(
-            file, folder=folder,
-            allowed_formats=list(ALLOWED_EXTENSIONS),  # Cloudinary also enforces it
+            file,
+            folder=folder,
+            allowed_formats=list(ALLOWED_EXTENSIONS),
             resource_type="image"
         )
-        return result["secure_url"]
+        url = result.get("secure_url")
+        print(f"[Cloudinary] ✅ Upload success: {url}", flush=True)
+        return url
     except Exception as e:
-        print(f"Cloudinary upload error: {e}", flush=True)
+        print(f"[Cloudinary] ❌ Upload FAILED: {e}", flush=True)
         return None
 
 app = Flask(__name__)
@@ -557,6 +562,8 @@ def submit_report_lost():
     file = request.files.get("image")
     if file and file.filename:
         image_filename = upload_to_cloudinary(file, "lost_items")
+        if not image_filename:
+            flash("⚠️ Image upload failed — item saved without photo. Check Cloudinary settings.", "error")
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -1601,7 +1608,7 @@ If no matches, return []. Maximum 5 matches."""
             send_notification_email(
                 subject=f"🎉 Good news! A similar item to your '{owner['item_name']}' was just found!",
                 body=(
-                    f"Hi {owner['name']},\n\n"
+                    f"Hi {owner['owner_name']},\n\n"
                     f"Great news! Our AI found a possible match for your lost item.\n\n"
                     f"🔍 Your Lost Item   : {owner['item_name']} ({owner['category']})\n"
                     f"✅ Found Item       : {found_name} ({found_category})\n"
