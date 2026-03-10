@@ -721,6 +721,27 @@ If truly zero matches, return []"""
 
     cursor.close(); conn.close()
 
+    # ── STEP 3: Visual Image Matching via Groq Vision ──────────────────
+    # Only run if the lost item itself has a photo
+    if lost and lost.get("image"):
+        print(f"[Vision] Lost item has image. Running visual match on top candidates...", flush=True)
+        for m in matches[:6]:  # limit to top 6 to keep API calls reasonable
+            if m.get("image"):
+                vscore, vreason = visual_image_match(lost["image"], m["image"])
+                m["vision_score"]  = vscore
+                m["vision_reason"] = vreason
+                m["vision_match"]  = vscore >= 65
+                if vscore > 0:
+                    # Weighted blend: 45% text score + 55% vision score
+                    blended = int(m["score"] * 0.45 + vscore * 0.55)
+                    m["score"] = max(m["score"], blended)
+                    print(f"[Vision] Found item {m['id']}: vision={vscore}% blended={m['score']}%", flush=True)
+            else:
+                m["vision_score"]  = None
+                m["vision_reason"] = ""
+                m["vision_match"]  = False
+    # ────────────────────────────────────────────────────────────────────
+
     # Sort by score descending
     matches.sort(key=lambda x: x["score"], reverse=True)
 
@@ -1638,6 +1659,52 @@ def get_groq_client():
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY environment variable is not set.")
     return GroqClient(api_key=GROQ_API_KEY)
+
+def visual_image_match(lost_image_url, found_image_url):
+    """Compare two item images using Groq Vision API.
+    Returns (score 0-100, reason string). Returns (0, '') on failure."""
+    try:
+        client = get_groq_client()
+        resp = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "You are a visual item matching assistant for a campus Lost & Found system.\n"
+                            "Image 1 = a LOST item. Image 2 = a FOUND item.\n"
+                            "Visually compare them: color, shape, type, brand, size, material, markings.\n"
+                            "Decide how likely these are the SAME physical item.\n\n"
+                            "Scoring guide:\n"
+                            "90-100 = Almost certainly the same item\n"
+                            "70-89  = Very likely the same item\n"
+                            "50-69  = Possibly the same item\n"
+                            "20-49  = Probably different items\n"
+                            "0-19   = Clearly different items\n\n"
+                            "Return ONLY valid JSON, nothing else:\n"
+                            "{\"score\": 85, \"reason\": \"Same black Nike backpack with red logo and torn strap\"}"
+                        )
+                    },
+                    {"type": "image_url", "image_url": {"url": lost_image_url}},
+                    {"type": "image_url", "image_url": {"url": found_image_url}},
+                ]
+            }],
+            max_tokens=120,
+            temperature=0.1
+        )
+        raw = resp.choices[0].message.content.strip()
+        print(f"[Vision Debug] raw={raw}", flush=True)
+        m = re.search(r'\{.*?\}', raw, re.DOTALL)
+        if m:
+            data = json.loads(m.group())
+            score  = max(0, min(100, int(data.get("score", 0))))
+            reason = data.get("reason", "Visual comparison performed")
+            return score, reason
+    except Exception as e:
+        print(f"[Vision Error] {e}", flush=True)
+    return 0, ""
 
 # ── 1. AI CHATBOT ──────────────────────────────────────────
 def get_db_context_for_chat():
