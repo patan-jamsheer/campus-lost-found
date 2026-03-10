@@ -546,6 +546,8 @@ def submit_report_lost():
     category    = request.form["category"]
     date_lost   = request.form["date_lost"]
     status      = request.form.get("status", "Searching")
+    reward_raw  = request.form.get("reward_amount", "").strip()
+    reward      = int(reward_raw) if reward_raw.isdigit() and int(reward_raw) > 0 else None
 
     if not all([item_name, description, category, date_lost]):
         flash("Please fill in all required fields.", "error")
@@ -559,9 +561,9 @@ def submit_report_lost():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO lost_items (user_id, item_name, description, category, date_lost, image, status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s)
-    """, (user_id, item_name, description, category, date_lost, image_filename, status))
+        INSERT INTO lost_items (user_id, item_name, description, category, date_lost, image, status, reward)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (user_id, item_name, description, category, date_lost, image_filename, status, reward))
     new_id = cursor.lastrowid  # ✅ grab ID before closing cursor
     cursor.close(); conn.close()
 
