@@ -1660,13 +1660,22 @@ def get_groq_client():
         raise RuntimeError("GROQ_API_KEY environment variable is not set.")
     return GroqClient(api_key=GROQ_API_KEY)
 
+def cloudinary_to_jpg(url):
+    """Convert Cloudinary URL to jpg for vision model compatibility (avif/heic not supported)."""
+    if url and "cloudinary.com" in url and "/upload/" in url:
+        return url.replace("/upload/", "/upload/f_jpg,q_80/")
+    return url
+
 def visual_image_match(lost_image_url, found_image_url):
     """Compare two item images using Groq Vision API.
     Returns (score 0-100, reason string). Returns (0, '') on failure."""
     try:
+        # Convert to jpg — avif/heic not supported by vision models
+        lost_image_url  = cloudinary_to_jpg(lost_image_url)
+        found_image_url = cloudinary_to_jpg(found_image_url)
         client = get_groq_client()
         resp = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="meta-llama/llama-4-scout-17b-16e-instruct",  # Groq vision model
             messages=[{
                 "role": "user",
                 "content": [
