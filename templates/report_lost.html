@@ -71,6 +71,20 @@
         .btn-cancel:hover { background: #f1f5f9; }
         .btn-submit { padding: 12px 28px; border-radius: 10px; background: linear-gradient(135deg, #f97316, #fbbf24); color: white; font-weight: 700; font-size: 14px; border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(249,115,22,0.35); transition: transform 0.2s, box-shadow 0.2s; font-family: 'DM Sans', sans-serif; }
         .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(249,115,22,0.45); }
+        /* ── REWARD ── */
+        .reward-toggle { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; cursor: pointer; user-select: none; }
+        .reward-toggle input[type="checkbox"] { display: none; }
+        .reward-pill { width: 38px; height: 22px; background: #e2e8f0; border-radius: 99px; position: relative; transition: background 0.25s; flex-shrink: 0; }
+        .reward-pill::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.25s; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+        .reward-toggle input:checked ~ .reward-pill { background: #f59e0b; }
+        .reward-toggle input:checked ~ .reward-pill::after { transform: translateX(16px); }
+        .reward-toggle-text .reward-toggle-label { font-size: 14px; font-weight: 600; color: #92400e; }
+        .reward-toggle-text .reward-toggle-sub { font-size: 12px; color: #b45309; margin-top: 2px; }
+        .reward-amount-wrap { display: none; margin-top: 10px; }
+        .reward-amount-wrap.show { display: flex; align-items: center; }
+        .reward-prefix { padding: 11px 14px; background: #fef3c7; border: 1.5px solid #fde68a; border-right: none; border-radius: 10px 0 0 10px; font-weight: 700; color: #92400e; font-size: 15px; }
+        .reward-input { flex: 1; padding: 11px 14px; border: 1.5px solid #fde68a; border-left: none; border-radius: 0 10px 10px 0; font-size: 14px; color: #1e293b; background: #fffbeb; outline: none; font-family: 'DM Sans', sans-serif; }
+        .reward-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
     
         
         
@@ -189,6 +203,24 @@
                 </div>
             </div>
 
+            <!-- ── REWARD ── -->
+            <div class="field">
+                <label>🏆 Reward (optional)</label>
+                <label class="reward-toggle" for="reward-chk">
+                    <input type="checkbox" id="reward-chk" onchange="toggleReward(this)">
+                    <div class="reward-pill"></div>
+                    <div class="reward-toggle-text">
+                        <div class="reward-toggle-label">Offering a reward?</div>
+                        <div class="reward-toggle-sub">Encourage finders by offering cash for returning the item</div>
+                    </div>
+                </label>
+                <div class="reward-amount-wrap" id="reward-wrap">
+                    <span class="reward-prefix">₹</span>
+                    <input class="reward-input" type="number" name="reward_amount" id="reward_amount"
+                           placeholder="Enter reward amount (e.g. 500)" min="1" max="100000">
+                </div>
+            </div>
+
             <div class="submit-row">
                 <a href="{{ url_for('dashboard_user', user_id=user.id) }}" class="btn-cancel">Cancel</a>
                 <button type="submit" class="btn-submit">📬 Submit Report</button>
@@ -198,6 +230,13 @@
 {% endblock %}
 
 {% block extra_js %}
+function toggleReward(cb) {
+    var wrap = document.getElementById('reward-wrap');
+    var inp  = document.getElementById('reward_amount');
+    if (cb.checked) { wrap.classList.add('show'); inp.required = true; inp.focus(); }
+    else            { wrap.classList.remove('show'); inp.required = false; inp.value = ''; }
+}
+
 function aiGenerateDesc(itemType) {
     var itemName = document.getElementById('item_name').value.trim();
     var category = document.getElementById('category').value.trim();
